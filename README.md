@@ -52,6 +52,16 @@ The verifier does not trust feature tags. It re-serialises the shipped WOFF2
 and runs HarfBuzz on triple-letter runs, which must produce three distinct
 positional glyphs.
 
+## TypeScript is pinned to 6.x on purpose
+
+`astro check` needs a programmatic API that TypeScript's native compiler (7.0+)
+does not yet expose — see withastro/roadmap#1321. Upgrading to 7.x makes
+`pnpm check` fail outright. Revisit when the native compiler ships that API.
+
+`@astrojs/check` is an explicit dependency for a related reason: without it,
+`astro check` prompts to install it and **exits 0 in CI without checking
+anything**, so the gate looks green while verifying nothing.
+
 ## Tests
 
 ```bash
