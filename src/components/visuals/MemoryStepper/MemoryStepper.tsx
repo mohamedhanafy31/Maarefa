@@ -411,7 +411,12 @@ export default function MemoryStepper({
       <div class="ms-panels">
         {/* ── code, LTR ─────────────────────────────────────────────── */}
         <div class="ms-code" dir="ltr">
-          <pre tabIndex={0}>
+          {/* dir="ltr" here as well as on the wrapper. It would inherit, but
+              CLAUDE.md's rule is that every code surface carries the attribute
+              explicitly: inheritance breaks the moment this <pre> is moved or
+              reused, and the failure is silent. Same belt-and-braces the rehype
+              plugin applies to prose code blocks. */}
+          <pre tabIndex={0} dir="ltr">
             <code>
               {codeLines.map((line, i) => {
                 const n = i + 1;

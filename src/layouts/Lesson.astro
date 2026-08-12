@@ -107,7 +107,8 @@ const schema = {
       </ol>
     </nav>
 
-    <article class="lesson wrap" id="main">
+    <main id="main">
+      <article class="lesson wrap">
       <!-- Build-time position indicator (top, per CURRICULUM.md §4) -->
       <ModuleProgress position={positionInModule} total={totalInModule} />
 
@@ -149,7 +150,8 @@ const schema = {
       <!-- The lesson's own discussion thread. Term is the stable slug, never
            the title: a title edit must not orphan an existing thread. -->
       <Giscus term={`rust/${lessonModule}/${lesson.data.slug}`} />
-    </article>
+      </article>
+    </main>
   </div>
 </Base>
 

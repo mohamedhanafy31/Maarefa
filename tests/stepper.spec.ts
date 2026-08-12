@@ -40,6 +40,12 @@ test('the RTL/LTR boundary holds inside the component', async ({ page }) => {
   await expect(page.locator('.ms-code')).toHaveAttribute('dir', 'ltr');
   await expect(page.locator('.ms-memory')).toHaveAttribute('dir', 'ltr');
 
+  // Every <pre> carries dir explicitly, not by inheritance. Inheritance is
+  // correct today and breaks silently the moment the element is moved.
+  const preDirs = await page.$$eval('pre', (els) => els.map((e) => e.getAttribute('dir')));
+  expect(preDirs.length).toBeGreaterThan(0);
+  expect(preDirs.every((d) => d === 'ltr')).toBe(true);
+
   const dirs = await page.evaluate(() => ({
     explain: getComputedStyle(document.querySelector('.ms-explain')!).direction,
     controls: getComputedStyle(document.querySelector('.ms-controls')!).direction,
