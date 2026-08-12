@@ -30,6 +30,12 @@ jobs:
       - name: Logical CSS properties
         run: pnpm check:props
 
+      # Rules an Astro collection schema structurally cannot enforce: it only
+      # ever receives frontmatter, so a non-Western numeral in an MDX body
+      # passes the build silently.
+      - name: Content lint
+        run: pnpm check:content
+
       # Guards R-5. A subset that drops the Arabic joining lookups renders
       # disconnected letters and fails partially, so it survives a casual look.
       - name: Font subsets still shape Arabic
