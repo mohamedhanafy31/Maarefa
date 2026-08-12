@@ -10,54 +10,72 @@ Three inputs referenced in the answers did not arrive, and each is called out wh
 
 ## 1. Stack decisions
 
+**Framework: Astro 7.2.1.** Decided at P1 on measurement, not preference — see §10 Q-6. A prose page ships **0 bytes** of JavaScript; a page carrying an island ships only that island. This is the architecture `SITE_SPEC.md` §6 described as "per-page islands, zero JS on prose pages", which Next could not deliver.
+
 Every version is pinned exactly. No carets. A caret is a change that arrives while you have no laptop.
 
 ### Runtime dependencies
 
 | Package | Version | Why it is here |
 |---|---|---|
-| `next` | 16.3.0 | The chosen framework. `output: 'export'`, App Router, no runtime. |
-| `react` | 19.2.8 | Required by Next 16. |
-| `react-dom` | 19.2.8 | Required by Next 16. |
+| `astro` | 7.2.1 | The framework. Static output, file-based routing, islands, Content Collections, Shiki and GFM built in. |
+| `@astrojs/mdx` | 7.0.5 | MDX as a first-class content format. |
+| `@astrojs/preact` | 6.0.2 | The island renderer. |
+| `preact` | 10.29.8 | Island runtime. **7.5 KB gzip measured**, against 59.5 KB for React rendering an identical component. |
+| `@astrojs/rss` | 4.0.19 | First-party RSS. Correct XML escaping of Arabic content is fiddly enough to be worth one dependency. |
 
-Three runtime dependencies. That is the whole client surface.
+Only `preact` reaches a browser, and only on the two lesson pages that mount `MemoryStepper`. The other seven launch lessons ship nothing.
 
 ### Build-time dependencies (never shipped)
 
 | Package | Version | Why it is here |
 |---|---|---|
-| `@mdx-js/mdx` | 3.1.1 | Compiles MDX from `content/` to RSC output. Content lives outside `app/`, so Next's file-routed MDX doesn't apply — `compile()` + `run()` is called directly in a Server Component. |
-| `gray-matter` | 4.0.3 | Frontmatter parsing. Hand-rolling YAML parsing is the wrong place to save a dependency. |
-| `zod` | 4.4.3 | Frontmatter schema validation with useful errors. The build must reject a malformed lesson, not render it wrong. |
-| `shiki` | 4.4.3 | Build-time syntax highlighting, per `CLAUDE.md`. Custom TextMate theme authored to match §6, so no library skin ships. |
-| `remark-gfm` | 4.0.1 | Tables in lesson prose. The lesson template uses them heavily. |
-| `rehype-slug` | 6.0.0 | Heading IDs for deep links into long lessons. |
-| `rehype-autolink-headings` | 7.1.0 | The anchor affordance on those headings. |
+| `rehype-autolink-headings` | 7.1.0 | The anchor affordance for deep links into long lessons. Astro generates heading IDs but does not add anchors. **The only remark/rehype plugin that survived the revision.** |
 
 ### Tooling
 
 | Package | Version | Why it is here |
 |---|---|---|
-| `typescript` | 7.0.2 | Type checking. `.steps.ts` files are typed so authoring errors are caught at build, which is the entire premise of the visual system. |
-| `@types/react`, `@types/react-dom`, `@types/node` | matched | Types. |
-| `vitest` | 4.1.10 | Unit tests for the pure build logic: frontmatter schema, slug registry, asm cache hashing, link checker, budget checker. |
-| `@playwright/test` | 1.62.1 | **The 380px mixed-direction check.** Part of the definition of done, not optional tooling. Runs in GitHub Actions, not in the Cloudflare Pages build. |
+| `typescript` | 7.0.2 | `.steps.ts` files are typed, so authoring errors are build errors. That is the whole premise of §5. |
+| `@types/node` | matched | Types for `scripts/`. Preact ships its own. |
+| `vitest` | 4.1.10 | Unit tests for what remains custom: slug registry, asm cache hashing, link checker, budget checker. Frontmatter validation moved to Astro and no longer needs tests of ours. |
+| `@playwright/test` | 1.62.1 | **The 380px / 768px / 1440px mixed-direction check**, plus greyscale and Arabic-pangram assertions. Definition of done, not optional tooling. Runs in GitHub Actions, never in the Pages build. |
 
-Package manager: **pnpm 10.33.4**, pinned via `packageManager` in `package.json`. Node **22**, pinned via `.node-version`.
+Package manager **pnpm 10.33.4**, pinned via `packageManager`. Node **22**, pinned via `.node-version`.
+
+### Deleted by the Astro revision
+
+Each replacement was verified against a real build, not assumed from the dependency tree.
+
+| Was | Now | Verification |
+|---|---|---|
+| `next`, `react`, `react-dom` | `astro`, `preact` | prose page emits no `<script>` at all |
+| `@mdx-js/mdx` | `@astrojs/mdx` | MDX page built, 0 JS |
+| `gray-matter` | Content Collections parse frontmatter | — |
+| `zod` | re-exported from `astro:content`; Astro bundles it | present in `astro`'s dependencies |
+| `shiki` + custom rehype chain | Astro's built-in Shiki, custom theme via `markdown.shikiConfig` | `class="astro-code"` in output |
+| `remark-gfm` | GFM on by default | tables, strikethrough and footnotes all rendered |
+| `rehype-slug` | heading IDs automatic | `<h2 id="عنوان-فرعي">` — works on Arabic headings |
+| `@types/react`, `@types/react-dom` | Preact ships its own | — |
+| `lib/schema.ts` | `src/content.config.ts` | — |
+| `lib/content.ts` | `getCollection()` / `getEntry()` | — |
+| `lib/mdx.ts` | `@astrojs/mdx` | — |
+| `scripts/build-feeds.ts` | static endpoints (§3) | — |
+
+**What did not disappear, only moved:** the `dir="ltr"` code container and the three block tiers (`plain` / `runnable` / `showAsm`) are still custom — now a rehype plugin in `src/plugins/` reading the code-fence meta, rather than a hand-rolled Shiki wrapper. Astro highlights; we still own the wrapper markup. Likewise the slug registry: Content Collections validate a schema, but nothing native enforces "a published slug can never change."
 
 ### Rejected dependencies, and why
 
 | Rejected | Instead |
 |---|---|
+| `@astrojs/react` | Preact, unless `MemoryStepper` turns out to need React internals — **verified at P3, before the component is committed.** Fallback is one config line; see R-13. |
+| `@astrojs/sitemap` | A ~40-line endpoint. It emits a sitemap index for 20 pages, and draft/`noindex` exclusion driven by `SITE_URL` is custom either way. |
 | Tailwind | CSS Modules + a tokens file. Logical properties and mixed-direction layout are the entire difficulty of this project; a utility layer obscures exactly the thing that has to stay explicit. |
-| Contentlayer | Unmaintained. `gray-matter` + `zod` + ~120 lines. |
-| `next-mdx-remote` | A wrapper over `@mdx-js/mdx`, which we call directly. |
-| `rehype-pretty-code` | Wraps Shiki with features we'd disable. We need custom control over `dir="ltr"`, the three block tiers, and the assembly view anyway. |
-| `@giscus/react` | A React wrapper over a `<script>` tag with data attributes. Hand-rolled in ~30 lines, lazily mounted, and we control when the JS loads. |
+| `rehype-pretty-code` | We need custom control over `dir="ltr"`, the three block tiers, and the assembly view regardless. |
+| Any Giscus wrapper | A `<script>` tag with data attributes. Hand-rolled, lazily mounted, ~30 lines. |
 | `framer-motion` / any animation library | CSS transitions on SVG attributes, per `CLAUDE.md`. |
-| `sharp` | `images: { unoptimized: true }` — static export has no image optimiser. |
-| `next-sitemap` | ~80 lines in `scripts/`, and we need custom draft/noindex exclusion regardless. |
-| ESLint + Prettier | `tsc --noEmit` under `strict` catches what matters in a solo repo; formatting churn isn't worth the transitive dependency tree. Revisit if a second author appears. |
+| `sharp` | No image optimiser in a static build; images are hand-sized. |
+| ESLint + Prettier | `astro check` plus `tsc --noEmit` under `strict` catches what matters in a solo repo. Revisit if a second author appears. |
 | `clsx`, `date-fns`, icon packs | Template literals, `Intl.DateTimeFormat`, inline SVG. |
 
 ---
@@ -68,103 +86,71 @@ Package manager: **pnpm 10.33.4**, pinned via `packageManager` in `package.json`
 maarefa/
 ├── CLAUDE.md                        project constraints; read every session
 ├── PLAN.md                          this file
-├── LICENSE                          MIT — applies to code
-├── LICENSE-CONTENT                  CC BY-NC-SA 4.0 — applies to content/ and docs/
+├── LICENSE                          MIT — code
+├── LICENSE-CONTENT                  CC BY-NC-SA 4.0 — content/ and docs/
 ├── README.md                        what this is, how to run, how to author a lesson
 ├── .node-version                    22
-├── .gitignore
 ├── package.json                     packageManager: pnpm@10.33.4
-├── pnpm-lock.yaml                   committed
-├── next.config.mjs                  output: 'export', trailingSlash, images.unoptimized
-├── tsconfig.json                    strict, paths: @/*
-├── playwright.config.ts             380px project + desktop project
+├── astro.config.mjs                 integrations, markdown/shiki config, site
+├── tsconfig.json                    extends astro/tsconfigs/strict
+├── playwright.config.ts             380 / 768 / 1440 projects
 ├── vitest.config.ts
 │
 ├── docs/                            specifications
-│   ├── SITE_SPEC.md
-│   ├── CURRICULUM.md
-│   ├── VISUALS.md
-│   └── PROMPTS.md                   ← NOT PRESENT; see §10
+│   ├── SITE_SPEC.md · CURRICULUM.md · VISUALS.md
+│   ├── PROMPTS.md                   prompt sequence + acceptance criteria
+│   └── ADDENDUM-hosting.md          pages.dev now, real domain at P6
 │
-├── content/
+├── content/                         stays at the repo root, per CLAUDE.md;
+│   │                                reached by a glob() loader, not src/content/
 │   ├── .slug-registry.json          append-only; published slugs can never change
 │   ├── rust/
-│   │   ├── 00-getting-started/
-│   │   │   ├── 01-why-rust.mdx
-│   │   │   ├── 02-install.mdx
-│   │   │   ├── 03-editor-setup.mdx
-│   │   │   └── 04-first-program.mdx
-│   │   ├── 01-foundations/
-│   │   │   ├── 01-variables.mdx
-│   │   │   ├── 02-data-types.mdx
-│   │   │   └── 03-functions.mdx
+│   │   ├── 00-getting-started/      01-why-rust · 02-install · 03-editor-setup · 04-first-program
+│   │   ├── 01-foundations/          01-variables · 02-data-types · 03-functions
 │   │   └── 02-ownership/
-│   │       ├── 01-stack-heap.mdx
-│   │       ├── 01-stack-heap.steps.ts       ← visual data, co-located
-│   │       ├── 02-move.mdx
-│   │       └── 02-move.steps.ts             ← the flagship
-│   └── problems/
-│       ├── linux-binary-no-extension.mdx
-│       ├── rust-analyzer-not-working.mdx
-│       ├── cargo-command-not-found-vscode.mdx
-│       ├── borrow-checker-first-errors.mdx
-│       └── string-vs-str-mismatch.mdx
+│   │       ├── 01-stack-heap.mdx    + .steps.ts
+│   │       └── 02-move.mdx          + .steps.ts   ← the flagship
+│   └── problems/                    five .mdx entries
 │
-├── cache/
-│   └── asm/<hash>.json              committed; never re-fetched; never fetched in CI
+├── cache/asm/<hash>.json            committed; never re-fetched; never fetched in CI
 │
-├── app/
-│   ├── layout.tsx                   <html lang="ar" dir="rtl">, fonts, theme script
-│   ├── page.tsx                     landing
-│   ├── not-found.tsx                designed 404
-│   ├── globals.css                  imports tokens.css, resets, prose, print
-│   ├── rust/
-│   │   ├── page.tsx                 track overview, module map, static progress
-│   │   └── [module]/[lesson]/page.tsx
-│   ├── problems/
-│   │   ├── page.tsx
-│   │   └── [slug]/page.tsx
-│   ├── discuss/page.tsx
-│   ├── about/page.tsx
-│   └── admin/page.tsx               noindex, unlinked, Cloudflare Access gated
-│
-├── components/
-│   ├── visuals/
-│   │   ├── MemoryStepper/
-│   │   │   ├── index.tsx            'use client' — the only launch island
-│   │   │   ├── StackPanel.tsx
-│   │   │   ├── HeapPanel.tsx
-│   │   │   ├── Connections.tsx      pointer / borrow / invalid arrows
-│   │   │   ├── Controls.tsx         RTL; ≥44px targets
-│   │   │   ├── MemoryStepper.module.css
-│   │   │   └── types.ts             ← the schema in §5; imported by every .steps.ts
-│   │   ├── LifetimeTimeline/        period 3
-│   │   ├── FlowDiagram/             period 3
-│   │   └── static/                  hand-authored inline SVGs (0.4, 1.1, 1.2, 1.3)
-│   ├── lesson/
-│   │   ├── LessonLayout.tsx
-│   │   ├── CodeBlock.tsx            dir="ltr"; tier: plain | runnable | showAsm
-│   │   ├── AsmPanel.tsx             build-time assembly + rustc version stamp
-│   │   ├── PlaygroundLink.tsx
-│   │   ├── Exercise.tsx             <details>, zero JS
-│   │   ├── ProblemLinks.tsx
-│   │   ├── PrevNext.tsx
-│   │   └── ModuleProgress.tsx       static position indicator
-│   ├── Giscus.tsx                   'use client', IntersectionObserver-mounted
-│   ├── ThemeToggle.tsx              'use client', tiny
-│   └── admin/IssueQueue.tsx         'use client', unauthenticated GitHub REST
-│
-├── lib/
-│   ├── site.ts                      SITE_URL and other single-source constants
-│   ├── content.ts                   read + validate + sort lessons and problems
-│   ├── schema.ts                    zod schemas (§4)
-│   ├── mdx.ts                       compile pipeline, Shiki, rehype/remark chain
-│   └── asm.ts                       cache read + hash
+├── src/
+│   ├── content.config.ts            collections + zod schemas (§4) — replaces lib/schema.ts
+│   ├── pages/
+│   │   ├── index.astro              landing
+│   │   ├── 404.astro
+│   │   ├── rtl-test.astro           permanent RTL fixture (Prompt 1)
+│   │   ├── rust/index.astro         track overview, module map, static progress
+│   │   ├── rust/[module]/[lesson].astro
+│   │   ├── problems/index.astro
+│   │   ├── problems/[slug].astro
+│   │   ├── discuss.astro · about.astro
+│   │   ├── admin.astro              noindex, unlinked, Cloudflare Access gated
+│   │   ├── sitemap.xml.ts · rss.xml.ts · robots.txt.ts   static endpoints
+│   ├── layouts/
+│   │   ├── Base.astro               <html lang="ar" dir="rtl">, fonts, theme script
+│   │   └── Lesson.astro             the seven-part template
+│   ├── components/
+│   │   ├── visuals/
+│   │   │   ├── MemoryStepper/       index.tsx (Preact island) + panels + types.ts
+│   │   │   ├── LifetimeTimeline/ · FlowDiagram/     period 3
+│   │   │   └── static/              hand-authored inline SVGs
+│   │   ├── lesson/                  CodeBlock · InlineCode · AsmPanel · PlaygroundLink
+│   │   │                            Exercise · ProblemLinks · PrevNext · ModuleProgress
+│   │   ├── Giscus.astro             lazily mounted script embed
+│   │   ├── ThemeToggle.astro        inline, no framework
+│   │   └── admin/IssueQueue.tsx     Preact island, unauthenticated GitHub REST
+│   ├── plugins/
+│   │   └── code-tiers.ts            rehype: dir="ltr" wrapper + plain/runnable/showAsm
+│   ├── lib/
+│   │   ├── site.ts                  SITE_URL and the pages.dev/real-domain switch
+│   │   └── asm.ts                   cache read + hash
+│   └── styles/
+│       ├── tokens.css               §6, the whole variable set
+│       └── shiki-maarefa.json       custom syntax theme matching the palette
 │
 ├── scripts/
-│   ├── validate-content.ts          frontmatter, slug registry, cross-refs
 │   ├── fetch-asm.ts                 Compiler Explorer fetch + shortlink + cache
-│   ├── build-feeds.ts               sitemap.xml, robots.txt, rss.xml
 │   ├── check-links.ts               internal = fail, external = warn
 │   ├── check-budget.ts              per-route JS bytes, fails the build
 │   └── contrast.ts                  re-verifies §6 ratios; run when tokens change
@@ -172,43 +158,43 @@ maarefa/
 ├── public/
 │   ├── fonts/                       subset WOFF2, committed
 │   ├── og-default.png               one static card at launch
-│   └── _headers                     immutable cache for /fonts and /_next/static
+│   └── _headers                     noindex on pages.dev; immutable cache for fonts
 │
-├── styles/
-│   ├── tokens.css                   §6, the whole variable set
-│   └── shiki-maarefa.json           custom syntax theme matching the palette
-│
-└── .github/workflows/ci.yml         tsc, vitest, playwright 380px, budget
+└── .github/workflows/ci.yml         astro check, vitest, playwright, budget
 ```
+
+`scripts/validate-content.ts` is gone — Astro fails the build on a schema violation itself. The slug-registry and cross-reference checks that were in it move into `src/content.config.ts` as `superRefine` rules, so they run in the same pass.
 
 ---
 
 ## 3. Routing map
 
-Static export, `trailingSlash: true`. Every route is prerendered to HTML at build.
+Astro's file-based routing, static output, `trailingSlash: 'always'`. Every route is prerendered.
 
 | Route | Kind | Params generated from |
 |---|---|---|
 | `/` | static | — |
-| `/rust/` | static | reads all published lessons at build for the module map |
-| `/rust/[module]/[lesson]/` | dynamic | `generateStaticParams` over `content/rust/**/*.mdx`: `module` = frontmatter `module`, `lesson` = frontmatter `slug`. Drafts are included with `noindex` (see §4). |
-| `/problems/` | static | index over `content/problems/*.mdx` |
-| `/problems/[slug]/` | dynamic | `generateStaticParams` over `content/problems/*.mdx`, `slug` = frontmatter `slug` |
-| `/discuss/` | static | — |
-| `/about/` | static | — |
-| `/admin/` | static, `noindex` | build-time inventory embedded as JSON; issue queue fetched client-side |
-| `/404.html` | static | `not-found.tsx` |
-| `/sitemap.xml`, `/robots.txt`, `/rss.xml` | emitted post-export by `scripts/build-feeds.ts` | walks `out/` |
+| `/rust/` | static | `getCollection('lessons')` for the module map |
+| `/rust/[module]/[lesson]/` | dynamic | `getStaticPaths()` over the `lessons` collection: `module` = frontmatter `module`, `lesson` = frontmatter `slug`. Drafts included with `noindex`. |
+| `/problems/` | static | `getCollection('problems')` |
+| `/problems/[slug]/` | dynamic | `getStaticPaths()` over the `problems` collection |
+| `/discuss/` · `/about/` | static | — |
+| `/admin/` | static, `noindex` | build-time inventory from `getCollection`; issue queue fetched client-side |
+| `/rtl-test/` | static, `noindex` | the permanent RTL fixture |
+| `/404.html` | static | `404.astro` |
+| `/sitemap.xml` · `/rss.xml` · `/robots.txt` | static endpoints | `getCollection`, filtered by `published` and by whether `SITE_URL` is a `pages.dev` host |
 
-**Directory numbers never reach a URL.** `content/rust/02-ownership/02-move.mdx` with `module: ownership, slug: move` serves at `/rust/ownership/move/`. Ordering lives in frontmatter. The curriculum has already renumbered once — module 0 was inserted ahead of an existing module 1, and Cargo material moved from 1.x to 0.4 — and it will again.
+`getStaticPaths()` replaces `generateStaticParams()`; the endpoints replace `scripts/build-feeds.ts`, so feed generation is no longer a post-export pass over `out/` — it reads the same collection API the pages do, which removes a whole class of drift between what is rendered and what is listed.
 
-Launch routes: 1 landing + 1 track + 9 lessons + 1 problems index + 5 problems + discuss + about + admin + 404 = **20 pages.**
+**Directory numbers never reach a URL.** `content/rust/02-ownership/02-move.mdx` with `module: ownership, slug: move` serves at `/rust/ownership/move/`. The curriculum has already renumbered once and will again.
+
+Launch routes: landing + track + 9 lessons + problems index + 5 problems + discuss + about + admin + rtl-test + 404 = **21 pages**, of which **19 ship zero JavaScript**.
 
 ---
 
 ## 4. Content schema
 
-Validated by `zod` in `scripts/validate-content.ts`, which runs before `next build`. A schema failure fails the build with the file path and the offending field.
+Declared in `src/content.config.ts` using the `zod` re-exported from `astro:content`. Astro validates during `astro build` and fails with the file path and the offending field. The rules below that Astro does not express natively — slug registry, cross-reference resolution, Eastern-Arabic digits — are `superRefine` clauses on the same schemas, so they run in the same pass.
 
 ### Lesson frontmatter
 
@@ -719,10 +705,10 @@ Two pipelines, deliberately. **Cloudflare Pages runs the fast one. GitHub Action
 |---|---|---|
 | 1 | `pnpm install --frozen-lockfile` | lockfile drift |
 | 2 | `tsc --noEmit` | any type error, including in a `.steps.ts` |
-| 3 | `scripts/validate-content.ts` | frontmatter invalid · slug changed after publication · dangling cross-reference · missing visual target · Eastern-Arabic digits in `content/` |
+| 3 | *(folded into step 5)* | Astro validates collections during the build: frontmatter invalid · slug changed after publication · dangling cross-reference · missing visual target · Eastern-Arabic digits in `content/` |
 | 4 | `scripts/fetch-asm.ts --verify-only` | **any `showAsm` block has no cache entry.** In CI this never calls the network — a miss is an error telling you to run the fetch locally and commit the result. |
-| 5 | `next build` → `out/` | anything |
-| 6 | `scripts/build-feeds.ts` | emits `sitemap.xml`, `robots.txt`, `rss.xml`; drafts, `noindex` pages and `/admin` excluded |
+| 5 | `astro build` → `dist/` | anything, including a collection schema violation |
+| 6 | *(folded into step 5)* | `sitemap.xml`, `robots.txt` and `rss.xml` are static endpoints rendered by the build itself, reading the same collection API the pages do — drafts, `noindex` pages and `/admin` excluded at the source |
 | 7 | `scripts/check-links.ts` | **a broken internal link.** External links warn only — no network in CI, and a dead external link is not worth a failed deploy. |
 | 8 | `scripts/check-budget.ts` | any route exceeds its JS budget |
 
@@ -748,16 +734,16 @@ For each `showAsm` block:
 
 `scripts/check-budget.ts` parses each emitted HTML file for `<script src>`, sums the gzipped size of the referenced chunks, and compares against a per-route ceiling.
 
-Honest caveat: **Next.js App Router ships a React/Next client runtime on every page — there is no supported way to emit a truly zero-JS page.** The budget therefore measures *what we add on top of that baseline*, which is the thing we actually control:
+There is no framework baseline to subtract. A prose page emits no `<script>` at all, so the budget is an absolute figure rather than a delta:
 
-| Route class | Budget |
-|---|---|
-| Framework baseline | measured at Prompt 1, then frozen as the reference |
-| Prose lesson (no visual) | baseline + 2 KB gzip (theme script, analytics beacon, Giscus loader) |
-| Lesson with `MemoryStepper` | baseline + 12 KB gzip |
-| `/admin` | baseline + 4 KB gzip |
+| Route class | Budget (gzip) | Basis |
+|---|---|---|
+| Landing page | **0 bytes** | `PROMPTS.md` Prompt 1 acceptance criterion, taken literally |
+| Prose lesson, no visual | **2 KB** | theme script + analytics beacon + Giscus loader, all inline or deferred |
+| Lesson with `MemoryStepper` | **14 KB** | 7.5 KB measured Preact island floor + ~6 KB component and step data |
+| `/admin` | **10 KB** | Preact island + the issue-queue fetch |
 
-The numbers are provisional until Prompt 1 measures the baseline. See §9 R-9 and §10 Q-6 — the baseline is large enough that it deserves a look before it is locked in.
+Measured, not projected: Preact renders an equivalent component in **7.5 KB gzip**. The 14 KB ceiling leaves room for `MemoryStepper`'s real surface and its serialised `Step[]`; if it does not fit, that is a signal to trim the data, not to raise the budget.
 
 ### `SITE_URL`
 
@@ -823,15 +809,16 @@ Critical path marked ⚡. Everything not on it can slip a task without endangeri
 
 | | Task | Depends on |
 |---|---|---|
-| ⚡ | `lib/schema.ts` — zod schemas from §4 | P1 |
-| ⚡ | `lib/content.ts` — read, validate, sort, prev/next | schema |
-| ⚡ | `lib/mdx.ts` — `@mdx-js/mdx` + remark/rehype + Shiki, custom theme | P1 |
-| ⚡ | `CodeBlock` with the three tiers; `dir="ltr"`, ligatures off | mdx |
-| ⚡ | `/rust/[module]/[lesson]` route + `generateStaticParams` | content, mdx |
-| ⚡ | Slug registry + the never-regenerate check | schema |
-| | `LessonLayout` — the seven-part template, `Exercise` via `<details>` | route |
-| | `ModuleProgress`, `PrevNext` | content |
-| | `validate-content.ts` wired into `build:ci` | schema |
+| ⚡ | `src/content.config.ts` — collections + zod schemas from §4, glob loader pointed at root `content/` | P1 |
+| ⚡ | `superRefine` rules: slug registry never-regenerate, cross-reference resolution, Eastern-Arabic digit lint | content.config |
+| ⚡ | `src/plugins/code-tiers.ts` — rehype: `dir="ltr"` wrapper + `plain`/`runnable`/`showAsm` | P1 |
+| ⚡ | Shiki custom theme wired via `markdown.shikiConfig` | P1 |
+| ⚡ | `CodeBlock` with the three tiers; ligatures off | code-tiers |
+| ⚡ | `/rust/[module]/[lesson].astro` + `getStaticPaths()` | content.config |
+| | `Lesson.astro` — the seven-part template, `Exercise` via `<details>` | route |
+| | `ModuleProgress`, `PrevNext` derived from `getCollection` | route |
+
+*(`lib/schema.ts`, `lib/content.ts`, `lib/mdx.ts` and `scripts/validate-content.ts` were tasks in the Next plan. Astro provides all four — see §1 "Deleted by the Astro revision".)*
 
 ### P3 — `MemoryStepper` ⚡ *the long pole*
 
@@ -878,7 +865,7 @@ Budget more time on 2.2 than on any other single artifact. It is the reason some
 
 | | Task | Depends on |
 |---|---|---|
-| ⚡ | `build-feeds.ts` — sitemap, robots, RSS | P4 |
+| ⚡ | `sitemap.xml.ts`, `rss.xml.ts`, `robots.txt.ts` static endpoints | P4 |
 | ⚡ | `check-links.ts` — internal fails the build | P4 |
 | ⚡ | Schema.org — `Course` on `/rust`, `TechArticle` on lessons, `FAQPage` on problems | P4 |
 | ⚡ | Breadcrumbs; unique title + meta description per page, derived from content | P4 |
@@ -913,9 +900,10 @@ Budget more time on 2.2 than on any other single artifact. It is the reason some
 | **R-6** | **rustc error text drifts.** Wording changes between releases. Quoted errors are the SEO asset and the pedagogical payload; a stale quote is worse than none. | Version pinned and **displayed** beside every quoted error and assembly panel. `rustcVersion` is a required frontmatter field wherever compiler output appears. A periodic review task, not a build check — the site should show what a real compiler said, with the version attached. |
 | **R-7** | **A Cloudflare Pages build fails while you are away.** Site stops updating; you cannot debug from a phone. | Everything that can fail runs in GitHub Actions on push *before* Pages builds, so the failure arrives as a phone notification against a commit rather than as a silent stale site. The Pages build itself is only install → typecheck → validate → export → feeds → links → budget: no network, no browser. The last good deploy stays live. |
 | **R-8** | **Slug drift.** A renamed slug after indexing destroys the SEO asset. | `content/.slug-registry.json`, append-only, checked in `validate-content.ts`. Changing a published slug fails the build. |
-| **R-9** | **The "zero JS" goal is not reachable with Next App Router.** Next ships a React/Next client runtime on every page. `SITE_SPEC.md`'s "per-page islands, zero JS on prose pages" describes an architecture Next does not offer. | Budget measures what we add above the baseline, and all lesson content stays in Server Components so no *component* JS is added. The baseline is real and should be seen before it is locked — §10 Q-6. |
+| **R-9** | ~~The "zero JS" goal is not reachable with Next App Router.~~ **Resolved, not mitigated.** Astro emits no `<script>` on a prose page — verified against a real build, including an MDX page. `SITE_SPEC.md`'s "per-page islands, zero JS on prose pages" is now literally true rather than aspirational, and the landing-page budget is 0 bytes rather than a delta above a framework floor. No residual risk. |
 | **R-10** | **Scope creep from small items.** Print stylesheet, RSS, 404, OG card, Playwright setup are each an hour and together are a launch window. | §8 P6 lists an explicit cut order. Launch succeeds on the deploy and 380px; everything else is negotiable. |
-| **R-11** | **TypeScript 7 is new.** The native compiler is a rewrite; a Next 16 or type-definition incompatibility would surface mid-build. | Isolated to tooling — nothing ships. Fallback is `typescript@5.9.x`, a one-line change with no code impact. Verify at P1 before content exists. |
+| **R-11** | **TypeScript 7 is new.** The native compiler is a rewrite; an incompatibility with `astro check` or the Astro type definitions would surface mid-build. Still applies after the framework switch — arguably more so, since `astro check` drives the TS language server rather than plain `tsc`. | Isolated to tooling — nothing ships. Fallback is `typescript@5.9.x`, a one-line change with no code impact. Verify at P1, before any content exists. |
+| **R-13** | **Preact may not carry `MemoryStepper`.** The component is hand-built SVG with three pieces of state, so it should need nothing React-specific — but that is a prediction, and discovering otherwise after the component is written would mean a rewrite. | `@astrojs/preact` → `@astrojs/react` is one config line plus an import swap; the component source is otherwise unchanged. **Verified at P3 before the component is committed**, per the ruling, and the real island cost is measured and reported at that point rather than assumed from the 7.5 KB probe. If the fallback is taken, the stepper-page budget rises from 14 KB to ~66 KB and prose pages are unaffected either way. |
 | **R-12** | **Giscus depends on GitHub.** An outage or a Discussions policy change takes comments with it. | Lazily mounted and non-blocking: the lesson renders fully without it. No lesson content lives in a comment thread. |
 
 ---
@@ -936,7 +924,7 @@ Decisions I need before the task that depends on them.
 |---|---|---|
 | **Q-4** | **Palette approval.** §6 is proposed, with measured ratios. Every AA threshold passes in both themes. The judgement call is the caveat: state colours sit close in luminance by design, so structural differentiation carries colour-blind and print legibility. Approve, or adjust? | P1 |
 | **Q-5** | **rustc pin.** Local is **1.97.1 (8bab26f4f, 2026-07-14)** — used to capture the verbatim E0382 text in §5.2. Standardise the site on 1.97.1, or track latest stable at authoring time? | P4 |
-| **Q-6** | **Framework — measured, awaiting your call.** Threshold was 70 KB gzip first-load JS on a prose page. **Next 16.3.0: 129.5 KB** (+38.6 KB legacy polyfills modern browsers skip). **Astro 7.2.1: 0 bytes** on a prose page, 59.5 KB on a page carrying a React island, deferred via `client:visible`. Independently, `PROMPTS.md` Prompt 1 lists "zero JavaScript on the landing page" as an acceptance criterion — **unachievable on Next, exactly satisfied on Astro.** Recommendation is to switch; the call is yours and I will not make it unilaterally. | P1, blocking |
+| **Q-6** | ~~Framework.~~ **Resolved: Astro, with Preact islands.** Measured on an identical prose page — Next 16.3.0: 129.5 KB gzip; Astro 7.2.1: 0 bytes. Island cost measured separately — React 59.5 KB, **Preact 7.5 KB**. §1–§3 revised accordingly; §4–§9 carried over. Preact is provisional on the P3 verification in R-13. | — |
 | **Q-7** | **Giscus configuration** — repo owner, `repoId`, `categoryId`, and confirmation the giscus app is installed. Mapping will be `pathname`. | P5 |
 | **Q-8** | **Cloudflare account and Access.** Is the domain on Cloudflare DNS, and is Zero Trust enabled for the `/admin` Access application? | P1, P5 |
 | **Q-9** | **`/about` content** — real name, background, what you build. Cannot be drafted for you, and `CURRICULUM.md` §1 makes it the credibility mechanism. | P6 |

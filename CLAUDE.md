@@ -78,6 +78,10 @@ These supersede anything in `docs/` that contradicts them. Recorded so later ses
 | C5 | Progress is a **static, build-time position indicator** ("lesson 4 of 9"). No localStorage, no read tracking. |
 | C6 | Launch is **link-out only** to play.rust-lang.org. Inline execution is period 2. |
 | — | **`/playground` is removed from the IA.** It would be a thin page, and lessons link to the Playground where the code actually is. Thin pages damage the domain. |
+| — | **Framework is Astro 7.2.1 with Preact islands, not Next.js.** Decided on measurement at P1: an identical prose page ships 129.5 KB gzip on Next 16.3 against 0 bytes on Astro, against a 70 KB threshold. Island runtime measured at 7.5 KB for Preact vs 59.5 KB for React. `output: 'export'` in the constraints above now means Astro's static build. Preact is provisional until `MemoryStepper` is verified against it at P3 — fallback is `@astrojs/react`, one config line. |
+| — | **Deploy target is `maarefa.pages.dev` with `noindex` until P6.** No domain purchased yet; attaching one to an existing Pages project later is a setting, not a migration. `noindex` is set in `_headers` and derives from `SITE_URL`. See `docs/ADDENDUM-hosting.md`. |
+| — | **Lighthouse ≥ 95 mobile** on performance, accessibility, best practices and SEO is a hard acceptance gate, and RTL is verified at **380px, 768px and 1440px** — not 380px alone. From `docs/PROMPTS.md`. |
+| — | **After each prompt: review, commit, deploy.** Never run two prompts without deploying in between. From `docs/PROMPTS.md`. |
 
 ### Launch scope
 
