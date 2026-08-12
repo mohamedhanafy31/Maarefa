@@ -119,9 +119,13 @@ test('a moved binding draws no pointer', async ({ page }) => {
   await expect(page.locator('.ms-slot[data-ms-id="s1"]')).toHaveClass(/is-moved/);
   await expect(page.locator('.ms-slot[data-ms-id="s2"]')).toHaveClass(/is-owned/);
 
-  // Exactly one pointer, and it starts at s2 — not s1.
-  const arrows = await page.locator('.ms-arrow--pointer').count();
-  expect(arrows).toBe(1);
+  // Exactly one pointer, and it leaves s2 — not s1.
+  //
+  // toHaveCount, not `await locator.count()`. The arrows are drawn in an effect
+  // that waits on document.fonts.ready, so a bare count() is a snapshot taken
+  // before measurement has run — it passed locally and failed intermittently
+  // against the deployed site, where fonts arrive over the network.
+  await expect(page.locator('.ms-arrow--pointer')).toHaveCount(1);
 });
 
 test('the E0382 step states its reason in Arabic, not only inside the code block', async ({
