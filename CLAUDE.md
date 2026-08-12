@@ -100,10 +100,28 @@ These supersede anything in `docs/` that contradicts them. Recorded so later ses
 | — | **Deploy target is `maarefa.pages.dev` with `noindex` until P6.** No domain purchased yet; attaching one to an existing Pages project later is a setting, not a migration. `noindex` is set in `_headers` and derives from `SITE_URL`. See `docs/ADDENDUM-hosting.md`. |
 | — | **Lighthouse ≥ 95 mobile** on performance, accessibility, best practices and SEO is a hard acceptance gate, and RTL is verified at **380px, 768px and 1440px** — not 380px alone. From `docs/PROMPTS.md`. |
 | — | **After each prompt: review, commit, deploy.** Never run two prompts without deploying in between. From `docs/PROMPTS.md`. |
+| — | **Shiki runs dual-theme with `defaultColor: false`.** A single theme inlines `background-color` on every `<pre>`, which beats `--surface` — that broke the CSS-only scroll affordance and left code blocks dark in light mode. Token colours are re-applied from `--shiki-light` / `--shiki-dark` in `global.css`. |
+| — | **The JS budget distinguishes island pages from non-island pages.** Astro inlines its own `<astro-island>` bootstrap (~4.4 KB) on any page with a `client:` directive. One shared row would let an accidental island onto a prose page unnoticed, so `scripts/check-budget.mjs` keys on the presence of `<astro-island`. Prose pages and static-SVG lessons stay at an absolute **0 bytes external**. |
+| — | **Playground links use `edition=2024`.** `cargo new` on cargo 1.97.1 writes `edition = "2024"`; a learner copying a sample must land on the edition their own project uses. |
+| — | **A gate is not verified until it has been seen to fail.** Applied to every checker: the link check, the budget check, the logical-property check and the content lint were each made to fail deliberately before being trusted. Two of them had false positives that only surfaced that way. |
 
-### Launch scope
+### Launch scope — SHIPPED
 
 **9 lessons, all written from scratch.** Modules 0 (0.1–0.4), 1 (1.1–1.3), 2 (2.1–2.2).
+
+All nine are written, published and live, together with the 5 problem pages,
+`MemoryStepper` and its 2 visuals, and the 4 static SVGs. Measurements and the
+decisions taken during the build are recorded in `PLAN.md` §9a.
+
+**Two things are deliberately unfinished, and both need a human:**
+
+- **`GISCUS.categoryId` in `src/lib/site.ts` is empty.** Discussion categories
+  exist only in GitHub's GraphQL API, which always requires a token (the same
+  wall as E2), so the value cannot be derived from a build. Comment sections
+  render a link to Discussions until it is set. Get it from giscus.app.
+- **The `/about` biography is a marked placeholder.** Name and GitHub handle are
+  real; background and projects are facts about a person and must not be
+  generated.
 
 Earlier drafts of 1.1–1.3 exist as personal PDF study notes structured around someone else's video course. **They are not a source for this site and nothing carries over from them.** The curriculum in `docs/CURRICULUM.md` is the sole structural authority — its ordering is deliberate and diverges from typical course ordering (ownership arrives in module 2, much earlier than most).
 
