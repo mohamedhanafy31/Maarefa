@@ -1,0 +1,226 @@
+---
+/**
+ * Lesson.astro — Seven-part lesson template (CURRICULUM.md §4).
+ *
+ * Structure:
+ *   [top]  ModuleProgress — "الدرس N / M", static build-time indicator
+ *   [1]    اللي هتفهمه   — 2–3 bullets from frontmatter.summary
+ *   [2-6]  <slot />       — MDX body provides: الشرح / المرئي / الكود /
+ *                           ليه بيشتغل كده / تمرين (with <details> solution)
+ *   [7]    مشاكل شائعة   — ProblemLinks (if frontmatter.problems is non-empty)
+ *   [bot]  PrevNext       — derived from module+lesson order, never hand-maintained
+ *
+ * Props:
+ *   lesson          — the CollectionEntry from the lessons collection
+ *   prev / next     — adjacent published lessons (undefined at module boundaries)
+ *   positionInModule — 1-based position among all lessons in this module
+ *   totalInModule    — total lessons in this module (all, including drafts)
+ *
+ * Rules enforced here:
+ *   - noindex passed to Base for published:false entries (PLAN.md §4 rule 5)
+ *   - No client JavaScript (CLAUDE.md C3; prose pages ship zero external JS)
+ *   - All numeric chrome uses Western numerals 0-9 (CLAUDE.md C2)
+ *   - Logical CSS properties only (CLAUDE.md, scripts/check-logical-props.mjs)
+ */
+
+import Base from './Base.astro';
+import ModuleProgress from '../components/lesson/ModuleProgress.astro';
+import PrevNext from '../components/lesson/PrevNext.astro';
+import ProblemLinks from '../components/lesson/ProblemLinks.astro';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  lesson: CollectionEntry<'lessons'>;
+  prev?: CollectionEntry<'lessons'>;
+  next?: CollectionEntry<'lessons'>;
+  positionInModule: number;
+  totalInModule: number;
+}
+
+const { lesson, prev, next, positionInModule, totalInModule } = Astro.props;
+const {
+  title,
+  description,
+  summary,
+  published,
+  problems: problemSlugs,
+  minutes,
+  module: lessonModule,
+} = lesson.data;
+
+// Module display names (Arabic) used in the breadcrumb.
+const MODULE_NAMES: Record<string, string> = {
+  'getting-started': 'البداية',
+  'foundations': 'الأساسيات',
+  'ownership': 'الملكية',
+  'structuring': 'البنى',
+  'abstraction': 'التجريد',
+  'practical': 'Rust عملي',
+};
+const moduleName = MODULE_NAMES[lessonModule] ?? lessonModule;
+---
+
+<Base title={title} description={description} noindex={!published}>
+  <div class="lesson-shell">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb wrap" aria-label="مسار التنقل">
+      <ol class="breadcrumb-list">
+        <li><a href="/rust/">مسار Rust</a></li>
+        <li aria-hidden="true" class="breadcrumb-sep">›</li>
+        <li>{moduleName}</li>
+        <li aria-hidden="true" class="breadcrumb-sep">›</li>
+        <li aria-current="page">{title}</li>
+      </ol>
+    </nav>
+
+    <article class="lesson wrap" id="main">
+      <!-- Build-time position indicator (top, per CURRICULUM.md §4) -->
+      <ModuleProgress position={positionInModule} total={totalInModule} />
+
+      <!-- Lesson title — h1, one per page (SEO) -->
+      <header class="lesson-header">
+        <h1 class="lesson-title">{title}</h1>
+        <!-- Reading time: Western numeral + Arabic label -->
+        <p class="reading-time">
+          <time datetime={`PT${minutes}M`}>{minutes} دقيقة</time> قراءة
+        </p>
+      </header>
+
+      <!-- Part 1: اللي هتفهمه — from frontmatter.summary -->
+      <section class="lesson-section lesson-summary" aria-labelledby="summary-heading">
+        <h2 id="summary-heading">اللي هتفهمه</h2>
+        <ul class="summary-list">
+          {summary.map((item) => <li>{item}</li>)}
+        </ul>
+      </section>
+
+      <!-- Parts 2–6: MDX body (الشرح, المرئي, الكود, ليه بيشتغل كده, تمرين).
+           The MDX author writes h2 headings for each section. The <details>
+           element for the exercise solution is pure HTML — zero JS needed. -->
+      <div class="lesson-body">
+        <slot />
+      </div>
+
+      <!-- Part 7: مشاكل شائعة — links into /problems (if any) -->
+      {problemSlugs && problemSlugs.length > 0 && (
+        <section class="lesson-section lesson-problems" aria-labelledby="problems-heading">
+          <h2 id="problems-heading">مشاكل شائعة</h2>
+          <ProblemLinks slugs={problemSlugs} />
+        </section>
+      )}
+
+      <!-- Prev/next navigation — bottom, per CURRICULUM.md §4 -->
+      <PrevNext prev={prev} next={next} />
+    </article>
+  </div>
+</Base>
+
+<style>
+  /* ── Shell & breadcrumb ──────────────────────────────────────────── */
+  .lesson-shell {
+    /* Full-height column; the wrap class handles inline padding. */
+  }
+
+  .breadcrumb {
+    padding-block: var(--sp-3);
+    border-block-end: 1px solid var(--border);
+    margin-block-end: 0;
+  }
+
+  .breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-1);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+  }
+
+  .breadcrumb-list a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .breadcrumb-list a:hover { color: var(--accent); text-decoration: underline; }
+
+  .breadcrumb-sep { user-select: none; }
+
+  /* ── Lesson header ───────────────────────────────────────────────── */
+  .lesson-header {
+    margin-block: var(--sp-6) var(--sp-5);
+  }
+
+  .lesson-title {
+    margin-block: 0 var(--sp-2);
+    font-size: var(--fs-3xl);
+  }
+
+  .reading-time {
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  /* ── Sections ────────────────────────────────────────────────────── */
+  .lesson-section {
+    margin-block-end: var(--sp-8);
+  }
+
+  .summary-list {
+    padding-inline-start: var(--sp-5);
+    margin: 0;
+  }
+
+  .summary-list li {
+    margin-block-end: var(--sp-2);
+    line-height: var(--lh-body);
+  }
+
+  /* ── Lesson body (MDX slot) ──────────────────────────────────────── */
+  /* The body contains arbitrary h2/h3 headings and prose. We just let the
+     global styles handle most of it; this class is an anchor for specificity. */
+  .lesson-body {
+    margin-block-end: var(--sp-8);
+  }
+
+  /*
+   * The <details> exercise solution element needs no JS — it is a native HTML
+   * disclosure widget. Style it to match the site surface language.
+   */
+  .lesson-body :global(details) {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ui);
+    padding: var(--sp-4);
+    margin-block: var(--sp-4);
+    background: var(--surface);
+  }
+
+  .lesson-body :global(summary) {
+    font-weight: 500;
+    cursor: pointer;
+    list-style: none; /* remove the browser's default triangle */
+  }
+
+  .lesson-body :global(summary::-webkit-details-marker) { display: none; }
+
+  .lesson-body :global(summary::before) {
+    content: '▸ ';
+    color: var(--accent);
+    font-size: 0.85em;
+  }
+
+  .lesson-body :global(details[open] summary::before) {
+    content: '▾ ';
+  }
+
+  .lesson-body :global(details > :not(summary)) {
+    margin-block-start: var(--sp-4);
+  }
+
+  /* ── Problems section ────────────────────────────────────────────── */
+  .lesson-problems {
+    margin-block-end: var(--sp-6);
+  }
+</style>

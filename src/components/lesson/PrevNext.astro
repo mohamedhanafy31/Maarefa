@@ -1,0 +1,125 @@
+---
+/**
+ * PrevNext.astro — Lesson prev/next navigation.
+ *
+ * Derived entirely from (module order, lesson order) — never hand-maintained.
+ * Only published lessons participate in the chain (PLAN.md §4 rule 5).
+ * The ordering comes from the calling route's getStaticPaths(); this component
+ * only receives the resolved entries or undefined.
+ */
+
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  prev?: CollectionEntry<'lessons'>;
+  next?: CollectionEntry<'lessons'>;
+}
+
+const { prev, next } = Astro.props;
+
+function lessonUrl(l: CollectionEntry<'lessons'>): string {
+  return `/rust/${l.data.module}/${l.data.slug}/`;
+}
+---
+
+{(prev || next) && (
+  <nav class="prev-next" aria-label="التنقل بين الدروس">
+    <div class="prev-next-inner">
+      {prev && (
+        <a class="prev-next-link prev-link" href={lessonUrl(prev)} rel="prev">
+          <span class="direction-label" aria-hidden="true">→</span>
+          <span class="link-meta">
+            <span class="link-caption">الدرس السابق</span>
+            <span class="link-title">{prev.data.title}</span>
+          </span>
+        </a>
+      )}
+      {!prev && <span class="prev-next-spacer" />}
+
+      {next && (
+        <a class="prev-next-link next-link" href={lessonUrl(next)} rel="next">
+          <span class="link-meta">
+            <span class="link-caption">الدرس التالي</span>
+            <span class="link-title">{next.data.title}</span>
+          </span>
+          <span class="direction-label" aria-hidden="true">←</span>
+        </a>
+      )}
+    </div>
+  </nav>
+)}
+
+<style>
+  .prev-next {
+    margin-block-start: var(--sp-8);
+    padding-block-start: var(--sp-6);
+    border-block-start: 1px solid var(--border);
+  }
+
+  .prev-next-inner {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sp-4);
+  }
+
+  .prev-next-link {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ui);
+    text-decoration: none;
+    color: var(--text);
+    background: var(--surface);
+    flex: 1;
+    min-inline-size: 0;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .prev-next-link:hover,
+  .prev-next-link:focus-visible {
+    border-color: var(--accent);
+    background: var(--surface-2);
+  }
+
+  .prev-next-spacer {
+    flex: 1;
+  }
+
+  .link-meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    min-inline-size: 0;
+  }
+
+  .link-caption {
+    font-size: var(--fs-xs, 0.75rem);
+    color: var(--text-muted);
+  }
+
+  .link-title {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .direction-label {
+    font-size: var(--fs-lg);
+    color: var(--accent);
+    flex-shrink: 0;
+    /* Arrows follow visual direction in RTL: → points right (to prev),
+       ← points left (to next). These are ASCII chars, never ligatures. */
+  }
+
+  .next-link { text-align: start; }
+  .prev-link { text-align: end; flex-direction: row-reverse; }
+
+  @media (max-width: 480px) {
+    .prev-next-inner { flex-direction: column; }
+    .prev-link { flex-direction: row; text-align: start; }
+    .prev-next-spacer { display: none; }
+  }
+</style>

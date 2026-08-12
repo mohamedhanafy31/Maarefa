@@ -1,0 +1,311 @@
+---
+/**
+ * src/pages/rust/index.astro — Rust track overview
+ *
+ * Lists all six modules with their lessons. Lessons that exist in content/
+ * as published entries render as links. Lessons not yet written render as
+ * plain text "قادم قريباً" — NOT a link (PLAN.md §3, CURRICULUM.md §3).
+ *
+ * The full curriculum is hardcoded from CURRICULUM.md §2 and PLAN.md §2 with
+ * anticipated slugs (see report item 4 for decision notes). When a lesson is
+ * written and its slug matches the anticipated one, it automatically becomes
+ * a link on the next build.
+ *
+ * Modules 3–5 are entirely future scope; all their entries show "قادم قريباً".
+ *
+ * No client JavaScript. No hydration. Pure build-time rendering.
+ */
+
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+
+
+// ── Full curriculum from CURRICULUM.md §2 + PLAN.md §2 ──────────────────────
+// Slugs for existing/launch lessons come from the frontmatter in content/.
+// Slugs for future lessons are anticipated (PLAN.md directory names without
+// the numeric prefix). Decision documented in report item 4.
+
+type CurriculumLesson = { title: string; slug: string };
+type CurriculumModule = {
+  id: string;
+  titleAr: string;
+  titleEn: string;
+  lessons: CurriculumLesson[];
+};
+
+const CURRICULUM: CurriculumModule[] = [
+  {
+    id: 'getting-started',
+    titleAr: 'البداية',
+    titleEn: 'Getting Started',
+    lessons: [
+      { title: 'ليه Rust؟ وإيه اللي هتتعلمه', slug: 'why-rust' },
+      { title: 'تثبيت Rust',                   slug: 'install' },
+      { title: 'تجهيز بيئة العمل',              slug: 'editor-setup' },
+      { title: 'أول برنامج',                    slug: 'first-program' },
+    ],
+  },
+  {
+    id: 'foundations',
+    titleAr: 'الأساسيات',
+    titleEn: 'Foundations',
+    lessons: [
+      { title: 'المتغيرات والقابلية للتغيير', slug: 'variables' },
+      { title: 'أنواع البيانات',               slug: 'data-types' },
+      { title: 'الدوال',                       slug: 'functions' },
+      // 1.4 التحكم في المسار — deferred to period 2 (CLAUDE.md C1, CURRICULUM.md §3)
+      { title: 'التحكم في المسار',              slug: 'control-flow' },
+    ],
+  },
+  {
+    id: 'ownership',
+    titleAr: 'الملكية',
+    titleEn: 'Ownership',
+    lessons: [
+      { title: 'الستاك والهيب',               slug: 'stack-heap' },
+      { title: 'الملكية والنقل',              slug: 'move' },
+      { title: 'الاستعارة',                   slug: 'borrow' },
+      { title: 'الاستعارة القابلة للتغيير',   slug: 'borrow-mut' },
+      { title: 'الشرائح',                     slug: 'slices' },
+    ],
+  },
+  {
+    id: 'structuring',
+    titleAr: 'البنى',
+    titleEn: 'Structuring Data',
+    lessons: [
+      { title: 'الـ Structs',                     slug: 'structs' },
+      { title: 'الـ Enums',                       slug: 'enums' },
+      { title: 'مطابقة الأنماط',                  slug: 'pattern-matching' },
+      { title: 'Option',                           slug: 'option' },
+      { title: 'Result ومعالجة الأخطاء',           slug: 'result-error-handling' },
+    ],
+  },
+  {
+    id: 'abstraction',
+    titleAr: 'التجريد',
+    titleEn: 'Generics, Traits, Lifetimes',
+    lessons: [
+      { title: 'الأنواع العامة',                   slug: 'generics' },
+      { title: 'السمات',                           slug: 'traits' },
+      { title: 'دورات الحياة',                     slug: 'lifetimes' },
+      { title: 'الإرسال الساكن مقابل الديناميكي', slug: 'static-vs-dynamic' },
+    ],
+  },
+  {
+    id: 'practical',
+    titleAr: 'Rust عملي',
+    titleEn: 'Practical Rust',
+    lessons: [
+      { title: 'المجموعات',                        slug: 'collections' },
+      { title: 'أنماط معالجة الأخطاء',             slug: 'error-patterns' },
+      { title: 'الوحدات والحزم',                   slug: 'modules-packages' },
+      { title: 'الاختبارات',                       slug: 'testing' },
+      { title: 'التجريدات صفرية التكلفة',          slug: 'zero-cost-abstractions' },
+    ],
+  },
+];
+
+// ── Resolve which lessons exist in the collection ────────────────────────────
+// Only PUBLISHED lessons get links. Draft entries are excluded from all indexes
+// (PLAN.md §4 rule 5).
+
+const allLessons = await getCollection('lessons');
+// Build lookup: slug → collection entry (published only)
+const publishedBySlug = new Map(
+  allLessons
+    .filter((l) => l.data.published)
+    .map((l) => [l.data.slug, l]),
+);
+
+function lessonUrl(moduleId: string, slug: string): string {
+  return `/rust/${moduleId}/${slug}/`;
+}
+
+const pageTitle = 'مسار Rust';
+const pageDescription =
+  'مسار تعليمي عربي شامل لـ Rust — من الصفر حتى الملكية والتجريد، مع بصريات للذاكرة وأسمبلي حقيقي.';
+---
+
+<Base title={pageTitle} description={pageDescription}>
+  <main class="wrap" id="main">
+    <header class="track-header">
+      <h1>مسار <span dir="ltr">Rust</span></h1>
+      <p class="track-tagline">
+        من لا شيء مثبَّت إلى فهم الـ ownership — وهي النقطة التي يقرر عندها
+        معظم الناس الاستمرار أو الاستسلام.
+      </p>
+    </header>
+
+    <div class="modules-list">
+      {CURRICULUM.map((mod, modIdx) => (
+        <section class="module-card" aria-labelledby={`module-${mod.id}-heading`}>
+          <header class="module-card-header">
+            <!-- Western numeral for module number (CLAUDE.md C2) -->
+            <span class="module-number" dir="ltr" aria-hidden="true">
+              {String(modIdx).padStart(2, '0')}
+            </span>
+            <div class="module-card-titles">
+              <h2 id={`module-${mod.id}-heading`} class="module-title-ar">
+                {mod.titleAr}
+              </h2>
+              <p class="module-title-en" dir="ltr">{mod.titleEn}</p>
+            </div>
+          </header>
+
+          <ol class="lesson-list">
+            {mod.lessons.map((lesson, lessonIdx) => {
+              const entry = publishedBySlug.get(lesson.slug);
+              const isLive = entry !== undefined;
+              return (
+                <li class={`lesson-item ${isLive ? 'lesson-live' : 'lesson-soon'}`}>
+                  <!-- Western numeral for lesson position -->
+                  <span class="lesson-num" dir="ltr" aria-hidden="true">
+                    {lessonIdx + 1}
+                  </span>
+                  {isLive ? (
+                    <a
+                      href={lessonUrl(mod.id, lesson.slug)}
+                      class="lesson-link"
+                    >
+                      {lesson.title}
+                    </a>
+                  ) : (
+                    <span class="lesson-title-text">
+                      {lesson.title}
+                      <span class="coming-soon-badge">قادم قريباً</span>
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ))}
+    </div>
+  </main>
+</Base>
+
+<style>
+  /* ── Page header ─────────────────────────────────────────────────── */
+  .track-header {
+    margin-block-end: var(--sp-8);
+  }
+
+  .track-tagline {
+    font-size: var(--fs-lg);
+    color: var(--text-muted);
+    margin-block-start: var(--sp-3);
+    max-inline-size: var(--measure);
+  }
+
+  /* ── Module grid ─────────────────────────────────────────────────── */
+  .modules-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-6);
+    margin-block-end: var(--sp-10);
+  }
+
+  /* ── Module card ─────────────────────────────────────────────────── */
+  .module-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ui);
+    overflow: hidden;
+  }
+
+  .module-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    padding: var(--sp-4) var(--sp-5);
+    background: var(--surface);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .module-number {
+    font-family: var(--font-mono);
+    font-size: var(--fs-2xl);
+    font-weight: 700;
+    color: var(--accent);
+    opacity: 0.6;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .module-card-titles { flex: 1; min-inline-size: 0; }
+
+  .module-title-ar {
+    margin: 0;
+    font-size: var(--fs-xl);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .module-title-en {
+    margin: 0;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    margin-block-start: var(--sp-1);
+  }
+
+  /* ── Lesson list ─────────────────────────────────────────────────── */
+  .lesson-list {
+    list-style: none;
+    margin: 0;
+    padding: var(--sp-2) 0;
+  }
+
+  .lesson-item {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-3);
+    padding-inline: var(--sp-5);
+    padding-block: var(--sp-3);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .lesson-item:last-child { border-block-end: 0; }
+
+  .lesson-num {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs, 0.75rem);
+    color: var(--text-muted);
+    min-inline-size: 1.4ch;
+    flex-shrink: 0;
+  }
+
+  .lesson-link {
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .lesson-link:hover { color: var(--accent); }
+
+  .lesson-title-text {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    color: var(--text-muted);
+    flex-wrap: wrap;
+  }
+
+  .coming-soon-badge {
+    font-size: var(--fs-xs, 0.75rem);
+    padding-inline: var(--sp-2);
+    padding-block: 0.15em;
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* ── Responsive ──────────────────────────────────────────────────── */
+  @media (max-width: 480px) {
+    .module-card-header { padding: var(--sp-3) var(--sp-4); }
+    .lesson-item { padding-inline: var(--sp-4); }
+    .module-number { font-size: var(--fs-xl); }
+  }
+</style>

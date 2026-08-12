@@ -1,0 +1,140 @@
+---
+/**
+ * src/pages/rust/[module]/[lesson].astro — Lesson route
+ *
+ * URL shape: /rust/<module>/<slug>/ where both params come from FRONTMATTER,
+ * never from the directory numbers on disk (CLAUDE.md §Slugs, PLAN.md §3).
+ *   e.g. content/rust/02-ownership/01-stack-heap.mdx
+ *        → module: ownership, slug: stack-heap
+ *        → URL: /rust/ownership/stack-heap/
+ *
+ * getStaticPaths() also runs the cross-reference validation that cannot be
+ * done at schema-validation time (because each entry is validated independently
+ * by Astro's schema pass, while cross-refs require both collections in scope).
+ *
+ * Draft entries (published:false) ARE included: they build real pages with
+ * noindex (handled by Lesson.astro → Base.astro), but they are excluded from
+ * prev/next chains and all indexes (PLAN.md §4 rule 5).
+ */
+
+import { getCollection, render } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import LessonLayout from '../../../layouts/Lesson.astro';
+
+export async function getStaticPaths() {
+  // Load both collections. Astro caches these within a single build.
+  const [allLessons, allProblems] = await Promise.all([
+    getCollection('lessons'),
+    getCollection('problems'),
+  ]);
+
+  // ── Cross-reference validation (PLAN.md §4 rule 3) ──────────────────────
+  // A dangling slug FAILS THE BUILD. This runs once at build time with access
+  // to both collections — the right place for cross-collection checks.
+
+  const lessonSlugs = new Set(allLessons.map((l) => l.data.slug));
+  const problemSlugs = new Set(allProblems.map((p) => p.data.slug));
+
+  for (const lesson of allLessons) {
+    const { slug: thisSlug, prerequisites = [], problems = [] } = lesson.data;
+
+    for (const prereq of prerequisites) {
+      if (!lessonSlugs.has(prereq)) {
+        throw new Error(
+          `[content validation] Lesson '${thisSlug}' has a dangling prerequisite: ` +
+            `'${prereq}'. No lesson with that slug exists. ` +
+            'Fix the frontmatter or add the missing lesson. (PLAN.md §4 rule 3)',
+        );
+      }
+    }
+
+    for (const prob of problems) {
+      if (!problemSlugs.has(prob)) {
+        throw new Error(
+          `[content validation] Lesson '${thisSlug}' has a dangling problem reference: ` +
+            `'${prob}'. No problem entry with that slug exists. ` +
+            'Fix the frontmatter or add the missing problem. (PLAN.md §4 rule 3)',
+        );
+      }
+    }
+  }
+
+  // ── Build per-module lesson lists ────────────────────────────────────────
+  // Grouped and sorted by order. Both all-lessons (for progress indicator)
+  // and published-only (for prev/next chain) are built here.
+
+  const byModule = new Map<string, CollectionEntry<'lessons'>[]>();
+
+  for (const lesson of allLessons) {
+    const mod = lesson.data.module;
+    if (!byModule.has(mod)) byModule.set(mod, []);
+    byModule.get(mod)!.push(lesson);
+  }
+
+  // Sort each module's list by ascending order.
+  for (const lessons of byModule.values()) {
+    lessons.sort((a, b) => a.data.order - b.data.order);
+  }
+
+  // Published-only chains for prev/next. Draft lessons are excluded (PLAN.md §4 rule 5).
+  const publishedByModule = new Map<string, CollectionEntry<'lessons'>[]>();
+  for (const [mod, lessons] of byModule) {
+    publishedByModule.set(mod, lessons.filter((l) => l.data.published));
+  }
+
+  // ── Build path entries ───────────────────────────────────────────────────
+
+  return allLessons.map((lesson) => {
+    const { module: mod, slug } = lesson.data;
+
+    const moduleLessons = byModule.get(mod) ?? [];
+    const publishedChain = publishedByModule.get(mod) ?? [];
+
+    // Position among ALL lessons in this module (1-based, sorted by order).
+    // Shows the full curriculum structure including drafts ("الدرس 1 من 4").
+    const positionInModule = moduleLessons.findIndex((l) => l.data.slug === slug) + 1;
+    const totalInModule = moduleLessons.length;
+
+    // Prev/next: only published lessons participate.
+    const publishedIdx = publishedChain.findIndex((l) => l.data.slug === slug);
+    // A draft lesson is not in publishedChain; both prev and next are undefined.
+    const prev =
+      publishedIdx > 0 ? publishedChain[publishedIdx - 1] : undefined;
+    const next =
+      publishedIdx >= 0 && publishedIdx < publishedChain.length - 1
+        ? publishedChain[publishedIdx + 1]
+        : undefined;
+
+    return {
+      // Both params come from frontmatter — directory numbers never reach the URL.
+      params: { module: mod, lesson: slug },
+      props: { lesson, prev, next, positionInModule, totalInModule },
+    };
+  });
+}
+
+// ── Page component ───────────────────────────────────────────────────────────
+
+interface Props {
+  lesson: CollectionEntry<'lessons'>;
+  prev?: CollectionEntry<'lessons'>;
+  next?: CollectionEntry<'lessons'>;
+  positionInModule: number;
+  totalInModule: number;
+}
+
+const { lesson, prev, next, positionInModule, totalInModule } = Astro.props;
+
+// render() is the Content Layer API for MDX rendering (replaces entry.render()).
+const { Content } = await render(lesson);
+---
+
+<LessonLayout
+  lesson={lesson}
+  prev={prev}
+  next={next}
+  positionInModule={positionInModule}
+  totalInModule={totalInModule}
+>
+  <Content />
+</LessonLayout>

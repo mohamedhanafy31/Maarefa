@@ -1,0 +1,3 @@
+{
+  "_comment": "Append-only slug registry. Maps slug → { firstPublished, path }. A slug present here can never change. Registry-locking is a separate build task (PLAN.md §4 rule 1)."
+}

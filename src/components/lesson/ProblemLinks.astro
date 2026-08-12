@@ -1,0 +1,85 @@
+---
+/**
+ * ProblemLinks.astro — Links from a lesson into /problems.
+ *
+ * Receives an array of problem slugs from the lesson's `problems` frontmatter
+ * field. Fetches problem entries from the collection to resolve titles and
+ * symptoms (rendered as preview text). Any slug that resolves (cross-ref
+ * validation in getStaticPaths already ensures all slugs exist) becomes a link.
+ *
+ * Part 7 of the 7-part lesson template (CURRICULUM.md §4).
+ */
+
+import { getCollection } from 'astro:content';
+
+interface Props {
+  /** Problem slugs from the lesson frontmatter `problems` array. */
+  slugs: string[];
+}
+
+const { slugs } = Astro.props;
+
+// getCollection is cached by Astro; calling it here does not re-read disk.
+const allProblems = await getCollection('problems');
+const problems = allProblems.filter((p) => slugs.includes(p.data.slug));
+---
+
+{problems.length > 0 && (
+  <ul class="problem-links">
+    {problems.map((p) => (
+      <li class="problem-item">
+        <a href={`/problems/${p.data.slug}/`} class="problem-link">
+          <span class="problem-title">{p.data.title}</span>
+          {/* symptom is English (verbatim compiler/terminal output) — dir="ltr" */}
+          <span class="problem-symptom" dir="ltr">{p.data.symptom}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+)}
+
+<style>
+  .problem-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+  }
+
+  .problem-link {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    padding: var(--sp-3) var(--sp-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ui);
+    background: var(--surface);
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .problem-link:hover,
+  .problem-link:focus-visible {
+    border-color: var(--accent);
+    background: var(--surface-2);
+  }
+
+  .problem-title {
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .problem-symptom {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    /* Prevent the English error text from overflowing the RTL container. */
+    unicode-bidi: isolate;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+</style>
