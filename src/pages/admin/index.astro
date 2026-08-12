@@ -1,0 +1,266 @@
+---
+/**
+ * /admin/ — the phone dashboard.
+ *
+ * Designed for one situation: the author is away from a laptop for ~20 days and
+ * wants to know, from a phone, whether anything needs attention.
+ *
+ * Two panels, and the split between them is the whole design:
+ *
+ *   Inventory — computed AT BUILD TIME from the collections. Costs zero bytes
+ *   of JavaScript and can never be out of date relative to the deploy, because
+ *   it IS the deploy.
+ *
+ *   Reports — fetched at runtime from GitHub's REST API, unauthenticated. This
+ *   works and is documented to work: REST allows 60 requests/hour/IP with no
+ *   token. It is one person checking their own site, so the ceiling is not a
+ *   concern.
+ *
+ * There is deliberately NO Discussions panel. GitHub exposes Discussions only
+ * through GraphQL, and GraphQL always requires a token — there is no
+ * unauthenticated read path, so a static site cannot have one (CLAUDE.md, E2).
+ * Shipping a token to a public page to work around that would be handing out
+ * write access to the repository. The GitHub mobile app already notifies on
+ * new discussions, which is what that panel would have been for.
+ *
+ * Access is gated by Cloudflare Access in front of /admin/*, configured in the
+ * dashboard, not here. The page is also noindex.
+ */
+
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+import { SITE, GISCUS, giscusReady } from '../../lib/site.ts';
+
+const lessons = await getCollection('lessons');
+const problems = await getCollection('problems');
+
+const published = lessons.filter((l) => l.data.published);
+const drafts = lessons.filter((l) => !l.data.published);
+const problemDrafts = problems.filter((p) => !p.data.published);
+
+const byModule = new Map<string, typeof lessons>();
+for (const l of lessons) {
+  const list = byModule.get(l.data.module) ?? [];
+  list.push(l);
+  byModule.set(l.data.module, list);
+}
+for (const list of byModule.values()) list.sort((a, b) => a.data.order - b.data.order);
+
+// Build-time facts worth seeing on a phone before deciding anything.
+const withVisual = published.filter((l) => l.data.visual && l.data.visual.kind !== 'none');
+const noProblemLinks = published.filter((l) => !l.data.problems?.length);
+const totalMinutes = published.reduce((n, l) => n + l.data.minutes, 0);
+
+const buildStamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
+
+const CHECKS = [
+  { label: 'دروس منشورة', value: String(published.length) },
+  { label: 'مسودات', value: String(drafts.length) },
+  { label: 'صفحات مشاكل منشورة', value: String(problems.length - problemDrafts.length) },
+  { label: 'مسودات مشاكل', value: String(problemDrafts.length) },
+  { label: 'دروس معاها مرئي', value: `${withVisual.length} / ${published.length}` },
+  { label: 'دروس من غير روابط مشاكل', value: String(noProblemLinks.length) },
+  { label: 'إجمالي دقائق القراءة', value: String(totalMinutes) },
+  { label: 'Giscus', value: giscusReady ? `مفعّل (${GISCUS.category})` : 'مش مفعّل — categoryId فاضي' },
+];
+---
+
+<Base title="لوحة الإدارة" description="جرد المحتوى وبلاغات القرّاء." noindex={true}>
+  <main class="wrap" id="main">
+    <h1>لوحة الإدارة</h1>
+    <p class="build-stamp" dir="ltr">build {buildStamp} UTC</p>
+
+    <!-- ── Panel 1: build-time inventory, zero JS ──────────────────── -->
+    <section aria-labelledby="inv-heading">
+      <h2 id="inv-heading">الجرد</h2>
+      <dl class="checks">
+        {CHECKS.map((c) => (
+          <div>
+            <dt>{c.label}</dt>
+            <dd>{c.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {drafts.length > 0 && (
+        <>
+          <h3>مسودات — مبنية بـ noindex، وموصولة بالرابط المباشر</h3>
+          <ul class="draft-list">
+            {drafts.map((l) => (
+              <li>
+                <a href={`/rust/${l.data.module}/${l.data.slug}/`}>{l.data.title}</a>
+                <span class="meta" dir="ltr">{l.data.module} · order {l.data.order}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {noProblemLinks.length > 0 && (
+        <>
+          <h3>دروس منشورة من غير روابط لصفحات مشاكل</h3>
+          <ul class="draft-list">
+            {noProblemLinks.map((l) => (
+              <li><a href={`/rust/${l.data.module}/${l.data.slug}/`}>{l.data.title}</a></li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <h3>كل المحتوى</h3>
+      {[...byModule.entries()].map(([mod, list]) => (
+        <details>
+          <summary>{mod} <span class="meta" dir="ltr">({list.length})</span></summary>
+          <ul class="draft-list">
+            {list.map((l) => (
+              <li>
+                <a href={`/rust/${l.data.module}/${l.data.slug}/`}>{l.data.title}</a>
+                <span class="meta" dir="ltr">
+                  {l.data.published ? 'published' : 'draft'} · {l.data.minutes}m
+                  {l.data.visual ? ` · ${l.data.visual.kind}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ))}
+    </section>
+
+    <!-- ── Panel 2: reader reports, runtime fetch ──────────────────── -->
+    <section aria-labelledby="rep-heading">
+      <h2 id="rep-heading">بلاغات القرّاء</h2>
+      <p class="meta">
+        من GitHub Issues بوسم <code dir="ltr">problem-report</code>. الطلب بيتبعت
+        من متصفحك من غير أي مفتاح — الحد 60 طلب في الساعة لكل عنوان IP.
+      </p>
+      <div id="reports" data-repo={SITE.repoSlug}>
+        <p class="meta">اضغط عشان تحمّل.</p>
+        <button type="button" id="load-reports">حمّل البلاغات</button>
+      </div>
+    </section>
+  </main>
+</Base>
+
+<script is:inline>
+  (function () {
+    var box = document.getElementById('reports');
+    var btn = document.getElementById('load-reports');
+    if (!box || !btn) return;
+
+    function esc(s) {
+      return String(s).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      btn.textContent = 'جارٍ التحميل…';
+      var url =
+        'https://api.github.com/repos/' +
+        box.dataset.repo +
+        '/issues?state=open&labels=problem-report&per_page=30';
+
+      fetch(url, { headers: { Accept: 'application/vnd.github+json' } })
+        .then(function (r) {
+          if (r.status === 403) throw new Error('تجاوزت حد الطلبات. جرّب بعد شوية.');
+          if (!r.ok) throw new Error('GitHub رد بـ ' + r.status);
+          return r.json();
+        })
+        .then(function (issues) {
+          if (!issues.length) {
+            box.innerHTML = '<p class="meta">مفيش بلاغات مفتوحة.</p>';
+            return;
+          }
+          box.innerHTML =
+            '<ul class="reports">' +
+            issues
+              .map(function (i) {
+                return (
+                  '<li><a href="' + esc(i.html_url) + '" rel="noopener">' +
+                  esc(i.title) + '</a>' +
+                  '<span class="meta" dir="ltr">#' + i.number + ' · ' +
+                  esc(i.created_at.slice(0, 10)) + ' · ' + esc(i.user.login) +
+                  '</span></li>'
+                );
+              })
+              .join('') +
+            '</ul>';
+        })
+        .catch(function (e) {
+          box.innerHTML = '<p class="meta">' + esc(e.message) + '</p>';
+        });
+    });
+  })();
+</script>
+
+<style>
+  .build-stamp {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+  h2 { margin-block-start: var(--sp-7); }
+  h3 { font-size: var(--fs-lg); margin-block-start: var(--sp-5); }
+
+  .checks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: var(--sp-3);
+    margin-block: var(--sp-4);
+  }
+  .checks > div {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ui);
+    background: var(--surface);
+    padding: var(--sp-3);
+  }
+  .checks dt { font-size: var(--fs-sm); color: var(--text-muted); }
+  .checks dd {
+    margin: var(--sp-1) 0 0;
+    font-family: var(--font-mono);
+    font-size: var(--fs-lg);
+    color: var(--accent);
+  }
+
+  .draft-list { list-style: none; padding: 0; }
+  .draft-list li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2) var(--sp-3);
+    align-items: baseline;
+    padding-block: var(--sp-2);
+    border-block-end: 1px solid var(--border);
+  }
+  .meta {
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  details { margin-block-end: var(--sp-3); }
+  summary { cursor: pointer; padding-block: var(--sp-2); }
+
+  button {
+    font: inherit;
+    min-block-size: var(--tap-min);
+    padding-inline: var(--sp-5);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-ui);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; }
+
+  :global(.reports) { list-style: none; padding: 0; }
+  :global(.reports li) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    padding-block: var(--sp-3);
+    border-block-end: 1px solid var(--border);
+  }
+</style>

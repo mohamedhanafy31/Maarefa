@@ -1,0 +1,47 @@
+---
+/**
+ * 404. Cloudflare Pages serves dist/404.html automatically for unmatched paths
+ * on a static project — no configuration and no redirect rules needed.
+ *
+ * Slugs are never regenerated once published (CLAUDE.md §Conventions), so a
+ * 404 here is a wrong URL rather than a moved page. The useful thing to offer
+ * is therefore navigation, not an apology.
+ */
+
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="الصفحة مش موجودة" noindex={true}>
+  <main class="wrap" id="main">
+    <p class="code" dir="ltr">404</p>
+    <h1>الصفحة دي مش موجودة</h1>
+    <p>
+      غالباً الرابط فيه غلطة. روابط الموقع مابتتغيّرش بعد النشر، فالصفحة على
+      الأغلب مااتنقلتش — الرابط نفسه هو المشكلة.
+    </p>
+    <nav class="links" aria-label="روابط مفيدة">
+      <a href="/">الرئيسية</a>
+      <a href="/rust/">مسار Rust</a>
+      <a href="/problems/">مكتبة المشاكل</a>
+      <a href="/about/">عن الموقع</a>
+    </nav>
+  </main>
+</Base>
+
+<style>
+  .code {
+    font-family: var(--font-mono);
+    font-size: var(--fs-3xl);
+    color: var(--accent);
+    margin-block: var(--sp-6) 0;
+  }
+  h1 { margin-block-start: var(--sp-2); }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-4);
+    margin-block-start: var(--sp-6);
+    padding-block-start: var(--sp-4);
+    border-block-start: 1px solid var(--border);
+  }
+</style>

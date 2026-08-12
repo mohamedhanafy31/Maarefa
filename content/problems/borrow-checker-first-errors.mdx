@@ -1,0 +1,222 @@
+---
+title: 'أول أخطاء الـ borrow checker: E0382 و E0499 و E0502'
+slug: borrow-checker-first-errors
+description: التلات رسائل اللي بتقابل أي حد جديد في Rust في أول أسبوع — إيه معنى كل واحدة بالظبط، وإيه الغلط الحقيقي وراها، وإزاي تصلّحها.
+symptom: 'error[E0382]: borrow of moved value'
+rustcVersion: '1.97.1'
+published: true
+updated: 2026-08-13
+relatedLessons:
+  - move
+  - stack-heap
+---
+
+## العَرَض
+
+تلات رسائل بتظهر بترتيب متقارب في أول أسبوع، وكلها جاية من نفس الجزء في
+الكومبايلر — الـ **borrow checker**:
+
+```
+error[E0382]: borrow of moved value: `s1`
+error[E0499]: cannot borrow `s` as mutable more than once at a time
+error[E0502]: cannot borrow `s` as mutable because it is also borrowed as immutable
+```
+
+الصفحة دي بتاخد كل واحدة بمثال حقيقي وخرج حقيقي.
+
+---
+
+## E0382 — استخدام قيمة بعد نقلها
+
+### الكود
+
+```rust
+fn main() {
+    let s1 = String::from("hello");
+    let s2 = s1;
+
+    println!("{}", s1);
+    println!("{}", s2);
+}
+```
+
+### الرسالة كاملة
+
+```
+error[E0382]: borrow of moved value: `s1`
+ --> src/main.rs:5:20
+  |
+2 |     let s1 = String::from("hello");
+  |         -- move occurs because `s1` has type `String`, which does not implement the `Copy` trait
+3 |     let s2 = s1;
+  |              -- value moved here
+4 |
+5 |     println!("{}", s1);
+  |                    ^^ value borrowed here after move
+  |
+help: consider cloning the value if the performance cost is acceptable
+  |
+3 |     let s2 = s1.clone();
+  |                ++++++++
+```
+
+<p class="rustc-stamp" dir="ltr">rustc 1.97.1 (8bab26f4f 2026-07-14)</p>
+
+### السبب
+
+`String` بيملك بايتات على الهيب. لو `s1` و`s2` فضلوا الاتنين صالحين، الاتنين
+هيحرروا نفس البايتات في آخر الدالة — تحرير مزدوج. عشان كده الإسناد **نقل**
+الملكية لـ `s2` وشطب `s1`.
+
+السطر اللي بيقول السبب هو `move occurs because s1 has type String, which does
+not implement the Copy trait`. الأنواع اللي بتطبّق `Copy` — الأرقام و`bool`
+و`char` — بتتنسخ عادي، عشان مفيش عندها حاجة على الهيب محتاجة تتحرر.
+
+### الحل
+
+فيه تلات حلول، مرتبين من الأرخص للأغلى:
+
+**1. استعِر بدل ما تنقل.** ده الحل الصح في أغلب الحالات:
+
+```rust
+let s2 = &s1;
+```
+
+**2. رتّب الاستخدام.** لو مش محتاج `s1` بعد النقل أصلاً، شيل السطر اللي بيستخدمها.
+
+**3. انسخ صراحة.** بس لو إنت فعلاً محتاج نسختين مستقلتين:
+
+```rust
+let s2 = s1.clone();
+```
+
+`clone` بتحجز على الهيب من جديد وبتنسخ الحروف. التكلفة حقيقية — متستخدمهاش عشان
+تسكّت الكومبايلر بس.
+
+---
+
+## E0499 — استعارتين قابلتين للتغيير في نفس الوقت
+
+### الكود
+
+```rust
+fn main() {
+    let mut s = String::from("hello");
+    let r1 = &mut s;
+    let r2 = &mut s;
+    println!("{}, {}", r1, r2);
+}
+```
+
+### الرسالة كاملة
+
+```
+error[E0499]: cannot borrow `s` as mutable more than once at a time
+ --> src/main.rs:4:14
+  |
+3 |     let r1 = &mut s;
+  |              ------ first mutable borrow occurs here
+4 |     let r2 = &mut s;
+  |              ^^^^^^ second mutable borrow occurs here
+5 |     println!("{}, {}", r1, r2);
+  |                        -- first borrow later used here
+```
+
+<p class="rustc-stamp" dir="ltr">rustc 1.97.1 (8bab26f4f 2026-07-14)</p>
+
+### السبب
+
+استعارة قابلة للتغيير معناها وصول **حصري**. الكومبايلر بيسمح بواحدة بس في نفس
+الوقت، وده اللي بيمنع سباق البيانات من غير أي فحص وقت التشغيل.
+
+خد بالك من السطر الأخير: `first borrow later used here`. الاستعارة الأولى
+بتفضل حية لحد آخر استخدام ليها، مش لحد آخر القوس. لو مستخدمتش `r1` بعد كده،
+الكود ده كان هيترجم عادي.
+
+### الحل
+
+خلّي كل استعارة تخلص شغلها قبل ما التانية تبدأ:
+
+```rust
+fn main() {
+    let mut s = String::from("hello");
+
+    let r1 = &mut s;
+    println!("{r1}");
+
+    let r2 = &mut s;
+    println!("{r2}");
+}
+```
+
+---
+
+## E0502 — تغيير حاجة وهي مستعارة
+
+### الكود
+
+```rust
+fn main() {
+    let mut s = String::from("hello");
+    let r1 = &s;
+    s.push_str(" world");
+    println!("{}", r1);
+}
+```
+
+### الرسالة كاملة
+
+```
+error[E0502]: cannot borrow `s` as mutable because it is also borrowed as immutable
+ --> src/main.rs:4:5
+  |
+3 |     let r1 = &s;
+  |              -- immutable borrow occurs here
+4 |     s.push_str(" world");
+  |     ^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+5 |     println!("{}", r1);
+  |                    -- immutable borrow later used here
+```
+
+<p class="rustc-stamp" dir="ltr">rustc 1.97.1 (8bab26f4f 2026-07-14)</p>
+
+### السبب
+
+`push_str` ممكن تخلّي النص يكبر عن سعته، فبتحجز مساحة جديدة على الهيب وبتنقل
+الحروف — والعنوان القديم بيبقى غير صالح. لو `r1` فضل موجود بعد كده، هيبقى بيشاور
+على مكان اتحرر.
+
+دي بالظبط الحالة اللي بتسبب use-after-free في C++، والفرق إن هنا الكومبايلر
+شافها قبل ما البرنامج يشتغل.
+
+### الحل
+
+استخدم الاستعارة العادية وخلّص منها قبل التعديل:
+
+```rust
+fn main() {
+    let mut s = String::from("hello");
+
+    let r1 = &s;
+    println!("{r1}");
+
+    s.push_str(" world");
+    println!("{s}");
+}
+```
+
+---
+
+## ليه بيحصل ده أصلاً
+
+التلات رسائل دي مش تلات مشاكل مختلفة. هي نتيجة واحدة لقاعدة واحدة:
+
+> في أي لحظة، تقدر يكون عندك **إما** أي عدد من الاستعارات العادية، **أو**
+> استعارة قابلة للتغيير واحدة. مش الاتنين.
+
+القاعدة دي هي اللي بتخلّي الكومبايلر قادر يحط أوامر التحرير في أماكنها من غير
+غلط، وهي كمان اللي بتمنع سباق البيانات بين الـ threads — نفس القاعدة، بلاش أي
+تكلفة وقت تشغيل.
+
+لو الرسايل دي بتضايقك في أول أسبوعين، ده طبيعي ومؤقت. الكومبايلر مش بيقولك
+"غلطت"، هو بيقولك **"مقدرتش أتأكد"**.

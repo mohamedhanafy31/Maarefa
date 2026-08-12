@@ -1,0 +1,38 @@
+Maarefa — educational content licence
+=====================================
+
+This licence covers the CONTENT of this directory: the Arabic lesson prose in
+content/, the problem pages, the visual step data (*.steps.ts), and the
+hand-authored SVG visuals in src/components/visuals/static/.
+
+The site's SOURCE CODE is licensed separately under MIT — see LICENSE at the
+repository root. The two are deliberately different: the code is meant to be
+reused freely, the writing is not meant to be repackaged and sold.
+
+    Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+    (CC BY-NC-SA 4.0)
+
+    https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+You are free to:
+
+  Share  — copy and redistribute the material in any medium or format
+  Adapt  — remix, transform, and build upon the material
+
+Under the following terms:
+
+  Attribution   — give appropriate credit to Maarefa (https://maarefa.pages.dev),
+                  link to the licence, and indicate if changes were made.
+  NonCommercial — you may not use the material for commercial purposes.
+  ShareAlike    — if you remix or build upon the material, you must distribute
+                  your contributions under this same licence.
+
+WHAT IS NOT COVERED
+-------------------
+
+Quoted compiler output, error messages, and any code emitted by the Rust
+toolchain are not this project's to license. Rust itself is dual-licensed under
+MIT and Apache-2.0 by the Rust Foundation and contributors.
+
+The fonts in public/fonts/ are subsets of IBM Plex Sans Arabic and JetBrains
+Mono, both under the SIL Open Font License 1.1, and carry their own terms.

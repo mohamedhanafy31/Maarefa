@@ -1,0 +1,97 @@
+---
+/**
+ * /problems/ — the troubleshooting library index.
+ *
+ * Every entry leads with its verbatim English symptom. That is deliberate: the
+ * arrival path for this page is someone pasting an error string into a search
+ * engine, and the string has to be on the page as text for that to work.
+ */
+
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+import { SITE_URL } from '../../lib/site.ts';
+
+const problems = (await getCollection('problems'))
+  .filter((p) => p.data.published)
+  .sort((a, b) => a.data.title.localeCompare(b.data.title, 'ar'));
+
+const description =
+  'مكتبة مشاكل Rust — كل صفحة فيها رسالة الخطأ بالحرف زي ما الكومبايلر بيطلعها، والسبب الحقيقي وراها، والحل.';
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'مكتبة المشاكل',
+  description,
+  inLanguage: 'ar',
+  url: new URL('/problems/', SITE_URL).href,
+};
+---
+
+<Base title="مكتبة المشاكل" description={description} schema={schema}>
+  <main class="wrap" id="main">
+    <h1>مكتبة المشاكل</h1>
+    <p class="lede">
+      كل صفحة هنا مكتوبة من تصحيح حقيقي، مش من تخيّل. رسالة الخطأ منقولة بالحرف
+      من تشغيل فعلي، ومكتوب معاها إصدار الكومبايلر اللي طلعت منه — عشان لما
+      الصيغة تتغير في إصدار جاي تعرف تقارن.
+    </p>
+
+    {problems.length === 0 ? (
+      <p>لسه مفيش صفحات منشورة.</p>
+    ) : (
+      <ul class="problem-index">
+        {problems.map((p) => (
+          <li>
+            <a href={`/problems/${p.data.slug}/`}>
+              <span class="pi-symptom" dir="ltr"><code>{p.data.symptom}</code></span>
+              <span class="pi-title">{p.data.title}</span>
+              <span class="pi-desc">{p.data.description}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+  </main>
+</Base>
+
+<style>
+  h1 { margin-block-start: var(--sp-5); }
+  .lede { color: var(--text-muted); }
+
+  .problem-index {
+    list-style: none;
+    padding: 0;
+    margin-block-start: var(--sp-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+  }
+  .problem-index a {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    padding: var(--sp-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ui);
+    background: var(--surface);
+    text-decoration: none;
+    color: var(--text);
+  }
+  .problem-index a:hover,
+  .problem-index a:focus-visible {
+    border-color: var(--accent);
+    background: var(--surface-2);
+  }
+  .pi-symptom {
+    unicode-bidi: isolate;
+    overflow-x: auto;
+  }
+  .pi-symptom code {
+    font-size: var(--fs-sm);
+    color: var(--mem-error);
+    white-space: pre;
+  }
+  .pi-title { font-weight: 600; color: var(--accent); }
+  .pi-desc { font-size: var(--fs-sm); color: var(--text-muted); line-height: var(--lh-body); }
+</style>

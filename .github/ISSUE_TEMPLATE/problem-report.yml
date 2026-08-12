@@ -1,0 +1,66 @@
+name: بلاغ عن غلطة في المحتوى
+description: رسالة خطأ مش مطابقة، رقم غلط، كود مش بيترجم، أو رابط مكسور.
+title: '[بلاغ]: '
+labels: ['problem-report']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        شكراً. المحتوى ده بيعلّم ناس، والشرح الغلط بيبني نموذج ذهني غلط بيفضل سنين —
+        فالبلاغ ده مش مجاملة.
+
+        البلاغات بالوسم `problem-report` بتظهر في لوحة الإدارة، فمش هتضيع.
+
+  - type: input
+    id: page
+    attributes:
+      label: الصفحة
+      description: الرابط الكامل أو مسارها.
+      placeholder: /rust/ownership/move/
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: نوع الغلطة
+      options:
+        - رسالة خطأ مش مطابقة للي بيظهر عندي
+        - كود مش بيترجم
+        - رقم أو حقيقة غلط
+        - رابط مكسور
+        - مشكلة في العرض (موبايل، اتجاه النص، إلخ)
+        - حاجة تانية
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: اللي المفروض يحصل
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: اللي حصل فعلاً
+      description: |
+        لو دي رسالة كومبايلر، الصقها بالحرف من غير تعديل. الصياغة التقريبية
+        أسوأ من مفيش — الناس بتبحث بالنص الحرفي.
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: rustc
+    attributes:
+      label: إصدار الكومبايلر عندك
+      description: 'ناتج `rustc --version`. مهم: صيغة الرسايل بتتغير بين الإصدارات.'
+      placeholder: rustc 1.97.1 (8bab26f4f 2026-07-14)
+
+  - type: input
+    id: env
+    attributes:
+      label: البيئة
+      placeholder: 'Ubuntu 24.04 · Firefox · موبايل'

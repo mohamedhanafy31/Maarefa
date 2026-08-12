@@ -1,0 +1,109 @@
+---
+/**
+ * Lesson 0.4 — what `cargo new hello` actually creates.
+ *
+ * Static SVG: nothing here changes state, so it needs no component and no JS
+ * (PLAN.md §5.4). Inlined rather than <img>, so it inherits the theme's CSS
+ * variables and prints correctly.
+ *
+ * The tree is verbatim from a real run of `cargo new hello`, which produced
+ * exactly four entries plus the git directory:
+ *   hello/Cargo.toml  hello/.gitignore  hello/src  hello/src/main.rs
+ *
+ * Everything inside is dir="ltr": these are file paths.
+ */
+
+interface Props {
+  caption?: string;
+}
+const { caption = 'اللي بيتعمل بالظبط لما تكتب cargo new hello' } = Astro.props;
+
+const rows = [
+  { indent: 0, glyph: '', name: 'hello/', note: 'مجلد المشروع', kind: 'dir' },
+  { indent: 1, glyph: '├──', name: 'Cargo.toml', note: 'اسم المشروع وإصداره وتبعياته', kind: 'file' },
+  { indent: 1, glyph: '├──', name: '.gitignore', note: 'سطر واحد جواه: ‎/target', kind: 'file' },
+  { indent: 1, glyph: '└──', name: 'src/', note: 'كل الكود بيقعد هنا', kind: 'dir' },
+  { indent: 2, glyph: '└──', name: 'main.rs', note: 'نقطة البداية — دالة main', kind: 'file' },
+];
+
+const ROW_H = 34;
+const TOP = 14;
+const H = TOP + rows.length * ROW_H + 10;
+---
+
+<figure class="tree-figure">
+  <div class="tree-scroll" dir="ltr">
+    <svg
+      viewBox={`0 0 640 ${H}`}
+      width="640"
+      height={H}
+      role="img"
+      aria-label="شجرة مشروع Rust جديد: مجلد hello فيه Cargo.toml و‏.gitignore ومجلد src، وجوه src ملف main.rs"
+      class="tree-svg"
+    >
+      {rows.map((r, i) => {
+        const y = TOP + i * ROW_H + 20;
+        const x = 12 + r.indent * 26;
+        return (
+          <>
+            {r.glyph && (
+              <text x={x} y={y} class="tree-glyph">{r.glyph}</text>
+            )}
+            <text x={x + (r.glyph ? 34 : 0)} y={y} class={`tree-name is-${r.kind}`}>
+              {r.name}
+            </text>
+            <text x="330" y={y} class="tree-note">{r.note}</text>
+          </>
+        );
+      })}
+    </svg>
+  </div>
+  <figcaption>{caption}</figcaption>
+</figure>
+
+<style>
+  .tree-figure {
+    margin-block: var(--sp-6);
+    margin-inline: 0;
+  }
+  .tree-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ui);
+    background: var(--surface);
+    padding: var(--sp-2);
+  }
+  .tree-svg {
+    display: block;
+    max-inline-size: none; /* the wrapper scrolls; the drawing must not squash */
+  }
+  .tree-glyph {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    fill: var(--text-muted);
+  }
+  .tree-name {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    fill: var(--text);
+  }
+  .tree-name.is-dir { fill: var(--accent); font-weight: 700; }
+  .tree-note {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    fill: var(--text-muted);
+    /* These notes are Arabic containing a Latin path (‎/target). `plaintext`
+       lets the first strong character pick the paragraph direction per string,
+       so the Arabic reads RTL and the path stays intact — without flipping the
+       element's `direction`, which would invert text-anchor and move the whole
+       column. The <text> elements sit inside a dir="ltr" wrapper because the
+       drawing is a file tree. */
+    unicode-bidi: plaintext;
+  }
+  figcaption {
+    margin-block-start: var(--sp-2);
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    text-align: center;
+  }
+</style>

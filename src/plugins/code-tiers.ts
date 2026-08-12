@@ -102,7 +102,11 @@ function parseTier(meta: string): Tier {
 
 /** Build the playground link element for a runnable code block. */
 function makePlaygroundLink(code: string): HastElement {
-  const url = `https://play.rust-lang.org/?code=${encodeURIComponent(code)}&edition=2021`;
+  // edition=2024, not 2021: `cargo new` on cargo 1.97.1 writes
+  // `edition = "2024"` into Cargo.toml, so a learner who copies a sample into
+  // the Playground must land on the same edition their own project uses.
+  // Verified: `cargo new hello && cat hello/Cargo.toml`.
+  const url = `https://play.rust-lang.org/?code=${encodeURIComponent(code)}&edition=2024`;
   return {
     type: 'element',
     tagName: 'a',

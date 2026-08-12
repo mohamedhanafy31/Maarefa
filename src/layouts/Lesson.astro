@@ -27,6 +27,8 @@ import Base from './Base.astro';
 import ModuleProgress from '../components/lesson/ModuleProgress.astro';
 import PrevNext from '../components/lesson/PrevNext.astro';
 import ProblemLinks from '../components/lesson/ProblemLinks.astro';
+import Giscus from '../components/site/Giscus.astro';
+import { SITE, SITE_URL } from '../lib/site.ts';
 import type { CollectionEntry } from 'astro:content';
 
 interface Props {
@@ -58,9 +60,41 @@ const MODULE_NAMES: Record<string, string> = {
   'practical': 'Rust عملي',
 };
 const moduleName = MODULE_NAMES[lessonModule] ?? lessonModule;
+
+const url = new URL(`/rust/${lessonModule}/${lesson.data.slug}/`, SITE_URL).href;
+
+// LearningResource + BreadcrumbList. Both are static JSON emitted at build; no
+// script runs, so this costs nothing against the JavaScript budget.
+const schema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'LearningResource',
+      name: title,
+      description,
+      inLanguage: 'ar',
+      url,
+      learningResourceType: 'lesson',
+      educationalLevel: 'Beginner',
+      timeRequired: `PT${minutes}M`,
+      teaches: summary,
+      isPartOf: { '@type': 'Course', name: 'مسار Rust', url: new URL('/rust/', SITE_URL).href },
+      ...(lesson.data.updated ? { dateModified: lesson.data.updated } : {}),
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: SITE.name, item: SITE_URL },
+        { '@type': 'ListItem', position: 2, name: 'مسار Rust', item: new URL('/rust/', SITE_URL).href },
+        { '@type': 'ListItem', position: 3, name: moduleName },
+        { '@type': 'ListItem', position: 4, name: title, item: url },
+      ],
+    },
+  ],
+};
 ---
 
-<Base title={title} description={description} noindex={!published}>
+<Base title={title} description={description} noindex={!published} schema={schema}>
   <div class="lesson-shell">
     <!-- Breadcrumb -->
     <nav class="breadcrumb wrap" aria-label="مسار التنقل">
@@ -111,6 +145,10 @@ const moduleName = MODULE_NAMES[lessonModule] ?? lessonModule;
 
       <!-- Prev/next navigation — bottom, per CURRICULUM.md §4 -->
       <PrevNext prev={prev} next={next} />
+
+      <!-- The lesson's own discussion thread. Term is the stable slug, never
+           the title: a title edit must not orphan an existing thread. -->
+      <Giscus term={`rust/${lessonModule}/${lesson.data.slug}`} />
     </article>
   </div>
 </Base>

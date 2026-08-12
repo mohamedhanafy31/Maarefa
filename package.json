@@ -12,10 +12,12 @@
     "fonts:verify": "python3 scripts/verify-fonts.py",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "build:ci": "astro check && node scripts/check-logical-props.mjs && node scripts/check-content.mjs && astro build && node scripts/emit-headers.mjs && node scripts/check-budget.mjs",
+    "build:ci": "astro check && node scripts/check-logical-props.mjs && node scripts/check-content.mjs && astro build && node scripts/emit-headers.mjs && node scripts/check-budget.mjs && node scripts/check-links.mjs",
     "check:props": "node scripts/check-logical-props.mjs",
     "check:budget": "node scripts/check-budget.mjs",
-    "check:content": "node scripts/check-content.mjs"
+    "check:content": "node scripts/check-content.mjs",
+    "check:links": "node scripts/check-links.mjs",
+    "og": "node scripts/make-og.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "7.0.5",
@@ -29,6 +31,7 @@
     "@playwright/test": "1.62.1",
     "@types/node": "22.10.2",
     "rehype-autolink-headings": "7.1.0",
+    "shiki": "4.4.3",
     "typescript": "6.0.3",
     "vitest": "4.1.10"
   }

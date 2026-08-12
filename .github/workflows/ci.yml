@@ -49,6 +49,11 @@ jobs:
       - name: JavaScript budget
         run: pnpm check:budget
 
+      # A broken internal link fails the build. Slugs are never regenerated
+      # once published, so a dead internal href is a typo, not a move.
+      - name: Internal links
+        run: pnpm check:links
+
       - run: pnpm exec playwright install --with-deps chromium
 
       - name: RTL at 320 / 380 / 768 / 1440

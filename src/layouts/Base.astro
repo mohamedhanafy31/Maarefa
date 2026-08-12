@@ -7,9 +7,20 @@ interface Props {
   description?: string;
   /** Draft lessons and internal fixtures set this. */
   noindex?: boolean;
+  /**
+   * Schema.org JSON-LD for this page. Emitted in a type="application/ld+json"
+   * block, which is data rather than script: no parser runs it, and the budget
+   * checker excludes it for that reason.
+   */
+  schema?: Record<string, unknown>;
 }
 
-const { title, description = SITE.description, noindex = false } = Astro.props;
+const {
+  title,
+  description = SITE.description,
+  noindex = false,
+  schema,
+} = Astro.props;
 
 // While on pages.dev nothing is indexable. The _headers file sets X-Robots-Tag
 // as well — belt and braces, because a per-page tag is the kind of thing that
@@ -35,6 +46,17 @@ const fullTitle = title === SITE.name ? `${SITE.name} — ${SITE.tagline}` : `${
     <meta property="og:locale" content="ar_EG" />
     <meta property="og:image" content={new URL('/og-default.png', SITE_URL).href} />
     <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="alternate" type="application/rss+xml" title={SITE.name} href="/rss.xml" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    {schema && (
+      <script
+        type="application/ld+json"
+        is:inline
+        set:html={JSON.stringify(schema)}
+      />
+    )}
 
     <!-- Preload only the two faces above the fold. The 500/600 weights and the
          bold mono load on demand; preloading all five would delay first paint

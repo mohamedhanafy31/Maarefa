@@ -1,0 +1,520 @@
+/* MemoryStepper styles.
+ *
+ * Loaded only by MemoryStepper.astro, so prose pages never see it.
+ * Logical properties only — CI greps for margin-left / margin-right / padding-
+ * left / padding-right (scripts/check-logical-props.mjs).
+ *
+ * The RTL/LTR boundary is structural here, not cosmetic: .ms-code and
+ * .ms-memory carry dir="ltr" in the markup and everything else inherits the
+ * document's rtl. Do not "simplify" that by moving direction into CSS — the
+ * HTML attribute is what screen readers and the bidi algorithm actually read.
+ */
+
+.ms {
+  --ms-gap: var(--sp-3);
+  display: block;
+  margin-block: var(--sp-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-ui);
+  background: var(--surface);
+  padding: var(--sp-4);
+}
+.ms:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ms-title {
+  margin-block: 0 var(--sp-4);
+  font-size: var(--fs-lg);
+}
+
+/* ── sequence tabs (lesson 2.4; unused at launch) ─────────────────── */
+.ms-tabs {
+  display: flex;
+  gap: var(--sp-2);
+  margin-block-end: var(--sp-4);
+}
+.ms-tab {
+  font: inherit;
+  font-size: var(--fs-sm);
+  min-block-size: var(--tap-min);
+  padding-inline: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-ui);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.ms-tab.is-active {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* ── panels ───────────────────────────────────────────────────────
+ * Desktop: code ∥ memory. ≤640px: stacked, code first (PLAN.md §5.3).
+ */
+.ms-panels {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ms-gap);
+}
+
+/* min-inline-size: 0 is load-bearing, not tidying.
+ *
+ * A grid item defaults to `min-width: auto`, which means it refuses to shrink
+ * below its content's min-content width. The code panel contains a <pre> whose
+ * lines never wrap, so its min-content width is the longest line — and the
+ * track grew to match, pushing the panel past the viewport and making the whole
+ * PAGE scroll sideways.
+ *
+ * It only showed at 320px: at 380 the longest line's min-content happened to
+ * fit inside the available 314px, so the bug sat there invisible. That is
+ * exactly why 320 is in the Playwright matrix.
+ */
+.ms-panels > * {
+  min-inline-size: 0;
+}
+@media (min-width: 641px) {
+  .ms-panels {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  }
+}
+
+/* ── code panel (dir="ltr" in markup) ─────────────────────────────── */
+.ms-code pre {
+  margin: 0;
+  padding: var(--sp-3) 0;
+  background: var(--bg);
+  background-image: none; /* the prose scroll affordance would fight the rows */
+  border: 1px solid var(--border);
+  border-radius: var(--radius-ui);
+  overflow-x: auto;
+  font-size: var(--fs-code);
+  line-height: var(--lh-code);
+}
+@media (max-width: 767px) {
+  .ms-code pre {
+    font-size: 0.75rem;
+    margin-inline: 0;
+    border-radius: var(--radius-ui);
+    border-inline: 1px solid var(--border);
+  }
+}
+
+.ms-line {
+  display: flex;
+  gap: var(--sp-3);
+  padding-inline: var(--sp-3);
+  border-inline-start: 3px solid transparent;
+  transition: background-color var(--dur-step) var(--ease);
+}
+.ms-line.is-active {
+  /* Both a tint and a rail. The tint alone is a 1.1:1 difference at these
+     colours, which is not a reliable signal; the rail is what carries it. */
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-inline-start-color: var(--accent);
+}
+.ms-lineno {
+  flex: 0 0 2ch;
+  text-align: end;
+  color: var(--text-muted);
+  user-select: none;
+}
+.ms-linecode {
+  white-space: pre;
+}
+
+/* Shiki runs with defaultColor:false (see src/lib/highlight.ts), so tokens
+ * carry --shiki-light / --shiki-dark and the theme choice is made here. */
+.ms-linecode,
+.ms-linecode span {
+  color: var(--shiki-dark);
+}
+:root[data-theme='light'] .ms-linecode,
+:root[data-theme='light'] .ms-linecode span {
+  color: var(--shiki-light);
+}
+
+/* ── memory panel (dir="ltr" in markup) ───────────────────────────── */
+.ms-memory {
+  position: relative;
+  display: flex;
+  /* Stacked below 641px so each region gets the full width — side by side at
+     380px leaves ~120px per region, which is narrower than a five-byte heap
+     block. The arrow renderer already handles a vertical relationship. */
+  flex-direction: column;
+  gap: var(--ms-gap);
+  align-items: flex-start;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-ui);
+  background: var(--bg);
+  overflow-x: auto;
+}
+
+@media (min-width: 641px) {
+  .ms-memory { flex-direction: row; }
+}
+
+.ms-arrows {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 2;
+}
+.ms-arrow {
+  fill: none;
+  stroke-width: 1.5;
+  stroke: var(--mem-pointer);
+  transition: d var(--dur-step) var(--ease);
+}
+.ms-arrow--borrow { stroke: var(--mem-borrowed); }
+.ms-arrow--borrow_mut { stroke: var(--mem-borrowed-mut); }
+.ms-arrow--invalid {
+  stroke: var(--mem-error);
+  stroke-dasharray: 4 3;
+}
+
+.ms-region {
+  /* `1 1 auto`, not `1 1 0`. An even split starves the heap: the stack column
+     has fixed-width slots and does not need half the panel, while the heap has
+     a contiguous byte row that must not be clipped. Sizing on content basis and
+     then sharing the remainder gives the row the space it needs. */
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-ui);
+  padding: var(--sp-2);
+}
+.ms-region--stack { background: var(--mem-stack-bg); }
+.ms-region--heap { background: var(--mem-heap-bg); }
+.ms-region--static { background: var(--mem-static-bg); }
+
+.ms-region-label,
+.ms-frame-label,
+.ms-block-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  margin-block-end: var(--sp-2);
+}
+.ms-region-empty,
+.ms-frame-empty {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  padding: var(--sp-3);
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-stack);
+}
+
+.ms-frame {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-stack);
+  padding: var(--sp-2);
+  margin-block-end: var(--sp-2);
+  background: var(--surface);
+}
+.ms-frame.is-parent { opacity: 0.75; }
+.ms-frame-slots { display: grid; gap: var(--sp-2); }
+
+.ms-slot-wrap { position: relative; }
+.ms-conflict-badge {
+  position: absolute;
+  inset-block-start: calc(var(--sp-2) * -1);
+  inset-inline-end: calc(var(--sp-2) * -1);
+  z-index: 3;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--mem-error);
+  color: var(--bg);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* ── a stack slot ─────────────────────────────────────────────────
+ * Stack slots are sharp-cornered, heap blocks are rounded. The SHAPE is what
+ * tells a learner which region they are looking at — colour is secondary,
+ * because the palette entries sit deliberately close in luminance.
+ */
+.ms-slot {
+  --slot-colour: var(--mem-owned);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  border: 2px solid var(--slot-colour);
+  border-radius: var(--radius-stack);
+  background: color-mix(in srgb, var(--slot-colour) calc(var(--mem-tint) * 100%), var(--surface));
+  padding: var(--sp-2);
+  transition:
+    border-color var(--dur-step) var(--ease),
+    background-color var(--dur-step) var(--ease),
+    opacity var(--dur-step) var(--ease);
+}
+.ms-slot.is-borrowed { --slot-colour: var(--mem-borrowed); }
+.ms-slot.is-borrowed_mut { --slot-colour: var(--mem-borrowed-mut); }
+.ms-slot.is-moved {
+  --slot-colour: var(--mem-moved);
+  border-style: dashed;
+  opacity: 0.68;
+}
+.ms-slot.is-dropped {
+  --slot-colour: var(--mem-freed);
+  border-style: dotted;
+  opacity: 0.5;
+}
+.ms-slot.is-uninitialised {
+  --slot-colour: var(--mem-moved);
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.ms-slot-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  align-items: baseline;
+}
+.ms-slot-name { font-weight: 700; color: var(--text); }
+.ms-slot-type { color: var(--text-muted); font-size: 0.9em; }
+.ms-slot-value {
+  margin-block-start: var(--sp-1);
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+.ms-fields {
+  margin-block-start: var(--sp-1);
+  display: grid;
+  gap: 1px;
+}
+.ms-field {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 1px var(--sp-1);
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+.ms-field.is-changed {
+  border-color: var(--slot-colour);
+  background: color-mix(in srgb, var(--slot-colour) 22%, var(--bg));
+}
+.ms-field-label { color: var(--text-muted); }
+.ms-field-value { color: var(--text); }
+
+.ms-slot-foot,
+.ms-block-foot {
+  display: flex;
+  flex-wrap: wrap;
+  /* A generous inline gap rather than a "·" separator. The separator was a
+     pseudo-element on every item after the first, and when the row wrapped it
+     landed at the START of the new line as a stray bullet. Whitespace does the
+     same job and cannot wrap wrongly. */
+  gap: var(--sp-1) var(--sp-4);
+  margin-block-start: var(--sp-2);
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+.ms-state {
+  color: var(--slot-colour, var(--text-muted));
+  font-weight: 700;
+}
+
+/* ── a heap block ─────────────────────────────────────────────────── */
+.ms-block {
+  --slot-colour: var(--mem-owned);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  border: 2px solid var(--slot-colour);
+  border-radius: var(--radius-heap);
+  background: color-mix(in srgb, var(--slot-colour) calc(var(--mem-tint) * 100%), var(--surface));
+  padding: var(--sp-2);
+  margin-block-end: var(--sp-2);
+  transition:
+    border-color var(--dur-step) var(--ease),
+    opacity var(--dur-step) var(--ease);
+}
+.ms-block.is-freed {
+  --slot-colour: var(--mem-freed);
+  border-style: dashed;
+  opacity: 0.55;
+}
+.ms-block.is-static {
+  --slot-colour: var(--mem-moved);
+  border-radius: var(--radius-stack);
+}
+
+.ms-cells {
+  display: flex;
+  /* nowrap is pedagogical, not cosmetic. These cells ARE contiguous bytes; a
+     wrapped row draws them as two separate runs, which is the wrong mental
+     model in the one lesson whose entire job is the shape of memory. When the
+     run is wider than its region it scrolls — honest — rather than folding. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 2px;
+  margin-block-start: var(--sp-1);
+  padding-block-end: 2px;
+}
+.ms-cell { flex: 0 0 auto; }
+.ms-cell {
+  min-inline-size: 1.6rem;
+  min-block-size: 1.6rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  padding-inline: 2px;
+  position: relative;
+}
+.ms-cell--padding {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 3px,
+    var(--border) 3px 4px
+  );
+  color: var(--text-muted);
+}
+.ms-cell--spare {
+  border-style: dashed;
+  opacity: 0.5;
+}
+.ms-cell--uninit {
+  border-style: dotted;
+  color: var(--text-muted);
+}
+.ms-cell.is-windowed {
+  /* Lesson 2.5: a slice is a window into an existing block, never a new one. */
+  border-color: var(--mem-borrowed);
+  box-shadow: inset 0 0 0 1px var(--mem-borrowed);
+}
+.ms-cell-offset {
+  position: absolute;
+  inset-block-end: -0.9em;
+  font-size: 0.65em;
+  color: var(--text-muted);
+}
+
+/* ── explanation — the text alternative for the whole diagram ─────── */
+.ms-explain {
+  margin-block-start: var(--sp-4);
+}
+.ms-explain-text {
+  margin: 0;
+  line-height: var(--lh-body);
+  max-inline-size: none;
+}
+
+.ms-note {
+  margin-block-start: var(--sp-3);
+  padding: var(--sp-3);
+  border-inline-start: 3px solid var(--accent);
+  border-radius: var(--radius-ui);
+  background: var(--surface-2);
+}
+.ms-note.is-error { border-inline-start-color: var(--mem-error); }
+.ms-note.is-warning { border-inline-start-color: var(--mem-borrowed-mut); }
+.ms-note-text { margin: 0; max-inline-size: none; }
+
+.ms-note-code {
+  margin-block: var(--sp-3) var(--sp-1);
+  font-size: 0.75rem;
+}
+.ms-rustc {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: end;
+}
+
+/* ── controls ─────────────────────────────────────────────────────
+ * RTL: the NEXT button sits on the LEFT, matching ArrowLeft = next.
+ * Source order is next → counter → previous, so RTL lays it out correctly
+ * without a single directional CSS property.
+ */
+.ms-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-block-start: var(--sp-4);
+}
+.ms-btn {
+  font: inherit;
+  font-size: var(--fs-sm);
+  min-block-size: var(--tap-min);
+  min-inline-size: var(--tap-min);
+  padding-inline: var(--sp-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-ui);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+.ms-btn:hover:not(:disabled) { border-color: var(--accent); }
+.ms-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.ms-counter {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: lining-nums;
+  white-space: nowrap;
+}
+
+.ms-dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-1);
+  list-style: none;
+  padding: 0;
+  margin-block: var(--sp-3) 0;
+}
+.ms-dot {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  font: inherit;
+  font-size: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+.ms-dot.is-active {
+  border-color: var(--accent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 20%, var(--bg));
+}
+
+.ms-hint {
+  margin-block: var(--sp-2) 0;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Reduced motion kills the animation, never the stepping. */
+.ms.is-static *,
+.ms.is-static *::before,
+.ms.is-static *::after {
+  transition: none !important;
+}
+
+@media print {
+  .ms-controls,
+  .ms-dots,
+  .ms-hint,
+  .ms-arrows { display: none; }
+}

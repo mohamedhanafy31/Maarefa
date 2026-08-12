@@ -1,0 +1,105 @@
+---
+title: 'rust-analyzer مش شغال — مفيش إكمال ولا أخطاء'
+slug: rust-analyzer-not-working
+description: فتحت VS Code وملقتش إكمال تلقائي ولا تحذيرات في Rust — السبب شبه دايماً إن الإضافة مش لاقية Cargo.toml في جذر مساحة العمل.
+symptom: 'rust-analyzer failed to discover workspace / could not find `Cargo.toml`'
+rustcVersion: '1.97.1'
+published: true
+updated: 2026-08-13
+relatedLessons:
+  - setup-editor
+---
+
+## العَرَض
+
+فتحت ملف `.rs` في VS Code ومفيش أي حاجة شغالة: مفيش إكمال تلقائي، مفيش خطوط
+حمرا تحت الأخطاء، ومفيش أنواع بتظهر جنب المتغيرات. الملف باين كأنه نص عادي.
+
+في شريط الحالة تحت، أو في `Output → rust-analyzer`, بتلاقي واحدة من دول:
+
+```
+rust-analyzer failed to discover workspace
+```
+
+```
+error: could not find `Cargo.toml` in `/home/user/projects` or any parent directory
+```
+
+## السبب
+
+`rust-analyzer` مش بيشتغل على ملفات مفردة. هو بيحلل **مشروع cargo**، وعشان يعمل
+كده لازم يلاقي `Cargo.toml`.
+
+وهو بيدوّر عليه في **جذر المجلد اللي إنت فاتحه في المحرر**، مش جنب الملف اللي إنت
+فيه. فلو فتحت مجلد فيه مشاريعك كلها:
+
+```
+projects/            ← إنت فاتح ده
+  hello/
+    Cargo.toml       ← وده هنا، مستوى تحت
+    src/main.rs
+  guessing_game/
+    Cargo.toml
+    src/main.rs
+```
+
+`rust-analyzer` بيبص في `projects/` مش بيلاقي `Cargo.toml`، وبيوقف.
+
+## الحل
+
+**افتح مجلد المشروع نفسه، مش المجلد اللي فوقه:**
+
+```bash
+code ~/projects/hello
+```
+
+يعني المجلد اللي فيه `Cargo.toml` مباشرة. جرّب دلوقتي — الإكمال هيشتغل في ثواني.
+
+### لو عندك أكتر من مشروع وعايزهم مفتوحين مع بعض
+
+استخدم Cargo workspace. اعمل `Cargo.toml` في `projects/` نفسه بالمحتوى ده:
+
+```toml
+[workspace]
+resolver = "2"
+members = ["hello", "guessing_game"]
+```
+
+كده `rust-analyzer` بيلاقي جذر واحد وبيحلل المشروعين مع بعض.
+
+### لو لسه مش شغال
+
+1. اتأكد إن الإضافة اللي مثبتة اسمها **rust-analyzer** بالظبط — الإضافة القديمة
+   `Rust` (rls) اتوقف دعمها ولازم تتشال، ولو الاتنين مثبتين بيتعارضوا.
+2. أعد تحميل النافذة: `Ctrl+Shift+P` → `Developer: Reload Window`.
+3. لو الرسالة بتقول إن الأمر نفسه مش موجود، المشكلة مختلفة تماماً — دي مشكلة
+   المسار، وليها صفحة لوحدها:
+   [cargo: command not found جوه VS Code](/problems/cargo-command-not-found-vscode/).
+
+## إزاي تتأكد بنفسك
+
+من التيرمنال، جوه المجلد اللي فاتحه في المحرر:
+
+```bash
+cargo check
+```
+
+لو رد بالرسالة دي، فالمشكلة مش في المحرر أصلاً — إنت واقف في المكان الغلط:
+
+```
+error: could not find `Cargo.toml` in `/tmp` or any parent directory
+```
+
+<p class="rustc-stamp" dir="ltr">cargo 1.97.1 (c980f4866 2026-06-30)</p>
+
+`rust-analyzer` بيستخدم نفس المنطق بالظبط. لو `cargo check` شغال من التيرمنال في
+المجلد ده، `rust-analyzer` المفروض يشتغل.
+
+## ليه بيحصل ده
+
+`rust-analyzer` مش مجرد مُلوِّن نصوص. هو بيبني نفس شجرة المشروع اللي الكومبايلر
+بيبنيها: الحزمة، تبعياتها، الـ features المفعّلة، إصدار اللغة. المعلومات دي كلها
+في `Cargo.toml` ومفيش مصدر تاني ليها.
+
+من غير الملف ده هو ميقدرش يعرف حتى نوع `String` جاي منين، فبيوقف بدل ما يديك
+إكمال غلط.

@@ -1,0 +1,54 @@
+---
+/**
+ * /problems/<slug>/ — one troubleshooting entry per file in content/problems/.
+ *
+ * getStaticPaths carries the other half of the cross-reference gate: the lesson
+ * route validates lesson → problem, this one validates problem → lesson. A
+ * dangling slug in either direction fails the build (PLAN.md §4 rule 3).
+ */
+
+import { getCollection, render } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import ProblemLayout from '../../layouts/Problem.astro';
+
+export async function getStaticPaths() {
+  const [allProblems, allLessons] = await Promise.all([
+    getCollection('problems'),
+    getCollection('lessons'),
+  ]);
+
+  const lessonBySlug = new Map(allLessons.map((l) => [l.data.slug, l]));
+
+  return allProblems.map((problem) => {
+    const related: CollectionEntry<'lessons'>[] = [];
+
+    for (const slug of problem.data.relatedLessons ?? []) {
+      const lesson = lessonBySlug.get(slug);
+      if (!lesson) {
+        throw new Error(
+          `[content validation] Problem '${problem.data.slug}' references a lesson ` +
+            `that does not exist: '${slug}'. Fix the frontmatter or add the lesson. ` +
+            '(PLAN.md §4 rule 3)',
+        );
+      }
+      // Draft lessons are real pages but must not be advertised from a
+      // published problem page — the link would work and read as finished work.
+      if (lesson.data.published) related.push(lesson);
+    }
+
+    return { params: { slug: problem.data.slug }, props: { problem, related } };
+  });
+}
+
+interface Props {
+  problem: CollectionEntry<'problems'>;
+  related: CollectionEntry<'lessons'>[];
+}
+
+const { problem, related } = Astro.props;
+const { Content } = await render(problem);
+---
+
+<ProblemLayout problem={problem} related={related}>
+  <Content />
+</ProblemLayout>

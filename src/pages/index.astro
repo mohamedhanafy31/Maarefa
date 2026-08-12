@@ -1,9 +1,30 @@
 ---
 import Base from '../layouts/Base.astro';
-import { SITE } from '../lib/site.ts';
+import { SITE, SITE_URL } from '../lib/site.ts';
+import { getCollection } from 'astro:content';
+
+const lessons = (await getCollection('lessons')).filter((l) => l.data.published);
+const problems = (await getCollection('problems')).filter((p) => p.data.published);
+
+// The entry point into the track: module 0, lesson 1.
+const first = lessons
+  .filter((l) => l.data.module === 'getting-started')
+  .sort((a, b) => a.data.order - b.data.order)[0];
+
+const totalMinutes = lessons.reduce((n, l) => n + l.data.minutes, 0);
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE.name,
+  alternateName: SITE.nameLatin,
+  description: SITE.description,
+  inLanguage: 'ar',
+  url: SITE_URL,
+};
 ---
 
-<Base title={SITE.name}>
+<Base title={SITE.name} schema={schema}>
   <main class="wrap" id="main">
     <h1>{SITE.name}</h1>
     <p class="tagline">{SITE.tagline}</p>
@@ -15,12 +36,56 @@ import { SITE } from '../lib/site.ts';
     </p>
 
     <p>
-      البداية مسار Rust، من الصفر — من غير أي حاجة متثبتة — لحد ما تفهم الـ
-      <code>ownership</code>، وهي النقطة اللي بيقرر عندها معظم الناس يكملوا أو
-      يسيبوا.
+      البداية مسار Rust، من الصفر — من غير أي حاجة متثبتة — لحد ما تفهم
+      <span dir="ltr"><code>ownership</code></span>، وهي النقطة اللي بيقرر عندها
+      معظم الناس يكملوا ولا يسيبوا.
     </p>
 
-    <p class="soon">الموقع تحت الإنشاء. الدروس في الطريق.</p>
+    {first && (
+      <p class="cta">
+        <a class="cta-link" href={`/rust/${first.data.module}/${first.data.slug}/`}>
+          ابدأ من الأول
+        </a>
+      </p>
+    )}
+
+    <dl class="stats">
+      <div>
+        <dt>دروس منشورة</dt>
+        <dd>{lessons.length}</dd>
+      </div>
+      <div>
+        <dt>دقيقة قراءة</dt>
+        <dd>{totalMinutes}</dd>
+      </div>
+      <div>
+        <dt>صفحات مشاكل</dt>
+        <dd>{problems.length}</dd>
+      </div>
+    </dl>
+
+    <section class="promise">
+      <h2>الاتفاق</h2>
+      <ul>
+        <li>
+          كل رسالة خطأ في الموقع منقولة <strong>بالحرف</strong> من تشغيل حقيقي،
+          ومكتوب معاها إصدار الكومبايلر اللي طلعت منه.
+        </li>
+        <li>
+          كل مثال كود اتترجم فعلاً قبل ما يتنشر. مفيش كود متكتوب من الذاكرة.
+        </li>
+        <li>
+          لو حاجة مش متأكد منها، بتتشال — مش بتتكتب بصيغة مطاطة.
+        </li>
+      </ul>
+    </section>
+
+    <nav class="home-nav" aria-label="أقسام الموقع">
+      <a href="/rust/">مسار Rust</a>
+      <a href="/problems/">مكتبة المشاكل</a>
+      <a href="/about/">عن الموقع</a>
+      <a href="/discuss/">النقاش</a>
+    </nav>
   </main>
 </Base>
 
@@ -30,12 +95,51 @@ import { SITE } from '../lib/site.ts';
     color: var(--text-muted);
     margin-block-start: calc(var(--sp-3) * -1);
   }
-  .soon {
-    margin-block-start: var(--sp-7);
-    padding: var(--sp-4);
-    background: var(--surface);
-    border: 1px solid var(--border);
+
+  .cta { margin-block: var(--sp-6); }
+  .cta-link {
+    display: inline-block;
+    padding: var(--sp-3) var(--sp-6);
+    min-block-size: var(--tap-min);
+    border: 1px solid var(--accent);
     border-radius: var(--radius-ui);
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .cta-link:hover {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-5);
+    margin-block: var(--sp-6);
+    padding-block: var(--sp-4);
+    border-block: 1px solid var(--border);
+  }
+  .stats dt {
+    font-size: var(--fs-sm);
     color: var(--text-muted);
+  }
+  .stats dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--fs-2xl);
+    color: var(--accent);
+    font-variant-numeric: lining-nums;
+  }
+
+  .promise ul { padding-inline-start: var(--sp-5); }
+  .promise li { margin-block-end: var(--sp-3); line-height: var(--lh-body); }
+
+  .home-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-4);
+    margin-block-start: var(--sp-7);
+    padding-block-start: var(--sp-5);
+    border-block-start: 1px solid var(--border);
   }
 </style>

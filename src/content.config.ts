@@ -24,6 +24,18 @@ import { glob } from 'astro/loaders';
 // This site uses Western numerals 0–9 exclusively (CLAUDE.md, C2).
 const EAST_ARABIC_RE = /[\u0660-\u0669]/;
 
+// ── ISO date, tolerant of YAML's helpfulness ─────────────────────────────────
+// YAML parses a bare 2026-08-13 into a Date object, so `updated: 2026-08-13`
+// and `updated: '2026-08-13'` reach the schema as different types. Rejecting
+// the unquoted form would be a build failure whose message ("expected string,
+// received object") says nothing about quotes — so accept both and normalise.
+// Everything downstream (sitemap lastmod, RSS pubDate) gets a plain
+// YYYY-MM-DD string either way.
+const isoDate = z
+  .union([z.string(), z.date()])
+  .transform((v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v))
+  .refine((v) => /^\d{4}-\d{2}-\d{2}$/.test(v), 'updated must be ISO date YYYY-MM-DD.');
+
 // ctx type: the second argument to z.superRefine callbacks.
 // We use `any` for ctx to avoid importing internal Zod types ($RefinementCtx)
 // that aren't exposed through astro:content's re-export.
@@ -127,10 +139,7 @@ const lessonSchema = z
       .optional(),
 
     /** ISO date YYYY-MM-DD. Used for sitemap lastmod and RSS pubDate. */
-    updated: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'updated must be ISO date YYYY-MM-DD.')
-      .optional(),
+    updated: isoDate.optional(),
   })
   .superRefine(rejectEastArabicDigits);
 
@@ -171,10 +180,7 @@ const problemSchema = z
      */
     relatedLessons: z.array(z.string()).optional(),
 
-    updated: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'updated must be ISO date YYYY-MM-DD.')
-      .optional(),
+    updated: isoDate.optional(),
   })
   .superRefine(rejectEastArabicDigits);
 

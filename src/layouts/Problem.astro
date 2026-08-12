@@ -1,0 +1,133 @@
+---
+/**
+ * Problem.astro — a troubleshooting entry.
+ *
+ * Shape per CURRICULUM.md §5: verbatim symptom → cause → fix → why it happens →
+ * related lesson. The MDX body supplies العَرَض / السبب / الحل / ليه بيحصل ده;
+ * this layout supplies the frame, the symptom banner and the back-links.
+ *
+ * The symptom banner is the SEO asset. People paste error text into a search
+ * engine, and Arabic competition for those exact strings is near zero — so the
+ * verbatim English string is rendered as text, dir="ltr", high on the page, and
+ * repeated in the page description.
+ */
+
+import Base from './Base.astro';
+import Giscus from '../components/site/Giscus.astro';
+import type { CollectionEntry } from 'astro:content';
+import { SITE_URL } from '../lib/site.ts';
+
+interface Props {
+  problem: CollectionEntry<'problems'>;
+  related: CollectionEntry<'lessons'>[];
+}
+
+const { problem, related } = Astro.props;
+const { title, description, symptom, rustcVersion, published, updated } = problem.data;
+
+// Schema.org TechArticle. A problem page is exactly the kind of thing that
+// earns a rich result, and the markup costs nothing at runtime.
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  headline: title,
+  description,
+  inLanguage: 'ar',
+  url: new URL(`/problems/${problem.data.slug}/`, SITE_URL).href,
+  ...(updated ? { dateModified: updated } : {}),
+  proficiencyLevel: 'Beginner',
+};
+---
+
+<Base title={title} description={description} noindex={!published} schema={schema}>
+  <div class="problem-shell">
+    <nav class="breadcrumb wrap" aria-label="مسار التنقل">
+      <ol class="breadcrumb-list">
+        <li><a href="/">الرئيسية</a></li>
+        <li aria-hidden="true">›</li>
+        <li><a href="/problems/">المشاكل</a></li>
+        <li aria-hidden="true">›</li>
+        <li aria-current="page">{title}</li>
+      </ol>
+    </nav>
+
+    <article class="problem wrap" id="main">
+      <header>
+        <h1>{title}</h1>
+
+        <!-- The verbatim string, LTR and isolated. Never translated. -->
+        <div class="symptom" dir="ltr">
+          <code>{symptom}</code>
+        </div>
+        {rustcVersion && (
+          <p class="rustc-stamp" dir="ltr">rustc {rustcVersion}</p>
+        )}
+      </header>
+
+      <div class="problem-body">
+        <slot />
+      </div>
+
+      {related.length > 0 && (
+        <section class="related" aria-labelledby="related-heading">
+          <h2 id="related-heading">الدروس المرتبطة</h2>
+          <ul>
+            {related.map((l) => (
+              <li>
+                <a href={`/rust/${l.data.module}/${l.data.slug}/`}>{l.data.title}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <Giscus term={`problems/${problem.data.slug}`} />
+    </article>
+  </div>
+</Base>
+
+<style>
+  .breadcrumb {
+    padding-block: var(--sp-3);
+    border-block-end: 1px solid var(--border);
+  }
+  .breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-1);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+  }
+  .breadcrumb-list a { color: var(--text-muted); text-decoration: none; }
+  .breadcrumb-list a:hover { color: var(--accent); text-decoration: underline; }
+
+  h1 { margin-block: var(--sp-6) var(--sp-4); }
+
+  .symptom {
+    unicode-bidi: isolate;
+    padding: var(--sp-3) var(--sp-4);
+    border-inline-start: 3px solid var(--mem-error);
+    border-radius: var(--radius-ui);
+    background: var(--surface);
+    overflow-x: auto;
+  }
+  .symptom code {
+    font-size: var(--fs-sm);
+    white-space: pre;
+    color: var(--text);
+  }
+
+  .problem-body { margin-block-start: var(--sp-6); }
+
+  .related {
+    margin-block-start: var(--sp-8);
+    padding-block-start: var(--sp-5);
+    border-block-start: 1px solid var(--border);
+  }
+  .related ul { padding-inline-start: var(--sp-5); }
+  .related li { margin-block-end: var(--sp-2); }
+</style>

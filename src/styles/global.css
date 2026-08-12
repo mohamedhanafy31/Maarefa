@@ -162,6 +162,22 @@ pre code {
   padding: 0;
   white-space: pre;
 }
+
+/* ── syntax colours ──────────────────────────────────────────────
+ * astro.config.mjs runs Shiki with two themes and `defaultColor: false`, so
+ * every token carries --shiki-light and --shiki-dark rather than a baked-in
+ * `color:`. Picking between them here is what makes syntax highlighting
+ * follow the site theme — and, more importantly, it stops Shiki writing a
+ * background-color that would beat --surface and break the scroll affordance.
+ */
+.astro-code,
+.astro-code span {
+  color: var(--shiki-dark);
+}
+:root[data-theme='light'] .astro-code,
+:root[data-theme='light'] .astro-code span {
+  color: var(--shiki-light);
+}
 /* A scrollable region must be reachable by keyboard (WCAG 2.1.1). Applied to
  * every pre because detecting overflow would need JavaScript. */
 pre:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -189,6 +205,26 @@ pre:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 }
 @media (max-width: 380px) {
   pre { font-size: 0.7rem; padding-inline: var(--sp-2); }
+}
+
+/* Version stamp under a quoted compiler block.
+ *
+ * CLAUDE.md: every quoted error and every assembly panel displays the rustc
+ * version it came from. Error wording drifts between releases, and an
+ * unversioned quote rots silently — a reader on 1.99 comparing their output to
+ * an unlabelled 1.97 block has no way to know why the text differs.
+ *
+ * Sits immediately after its <pre>, hence the negative block-start margin.
+ */
+.rustc-stamp {
+  margin-block: calc(var(--sp-4) * -1 + var(--sp-1)) var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: end;
+  max-inline-size: none;
 }
 
 /* ── tables ────────────────────────────────────────────────────── */

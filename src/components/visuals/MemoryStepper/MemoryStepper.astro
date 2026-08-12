@@ -1,0 +1,71 @@
+---
+/**
+ * MemoryStepper.astro — the build-time half of the stepper.
+ *
+ * Does two things the island must not do:
+ *   1. Highlights every sequence's code with Shiki, at build, into per-line
+ *      HTML. No highlighter ships to the client.
+ *   2. Owns the stylesheet import, so stepper.css is emitted only on pages
+ *      that actually use a stepper. Prose pages stay at an absolute 0 bytes.
+ *
+ * client:visible, not client:load. The stepper sits below the fold in every
+ * lesson that has one, and hydrating it during initial paint would spend the
+ * budget before the learner has scrolled to it.
+ */
+
+import MemoryStepper from './MemoryStepper.tsx';
+import { highlightLines } from '../../../lib/highlight.ts';
+import type { MemoryVisual } from './types.ts';
+import './stepper.css';
+
+interface Props {
+  visual: MemoryVisual;
+  initialStep?: number;
+}
+
+const { visual, initialStep = 0 } = Astro.props;
+
+const highlightedCode = await Promise.all(
+  visual.sequences.map((s) => highlightLines(s.code)),
+);
+---
+
+<MemoryStepper
+  client:visible
+  visual={visual}
+  initialStep={initialStep}
+  highlightedCode={highlightedCode}
+/>
+
+<noscript>
+  <div class="ms-noscript" dir="rtl">
+    <p>
+      العرض التفاعلي محتاج JavaScript. لو مقفول عندك، الشرح النصي لكل خطوة موجود
+      تحت — كل خطوة مكتوبة بالكامل بالعربي.
+    </p>
+    <ol>
+      {visual.sequences[0].steps.map((step) => <li>{step.explanation}</li>)}
+    </ol>
+  </div>
+</noscript>
+
+<style>
+  /* The noscript fallback is not a courtesy: step.explanation is defined as the
+     text alternative for the whole diagram (PLAN.md §5.3), so with the script
+     off the lesson must still be complete. */
+  .ms-noscript {
+    margin-block: var(--sp-6);
+    padding: var(--sp-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ui);
+    background: var(--surface);
+  }
+  .ms-noscript ol {
+    padding-inline-start: var(--sp-5);
+    margin-block-end: 0;
+  }
+  .ms-noscript li {
+    margin-block-end: var(--sp-3);
+    line-height: var(--lh-body);
+  }
+</style>

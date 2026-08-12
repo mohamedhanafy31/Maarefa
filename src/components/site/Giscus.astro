@@ -1,0 +1,125 @@
+---
+/**
+ * Giscus — the comment thread, one of the three JavaScript exceptions the site
+ * allows on a content page (CLAUDE.md C3).
+ *
+ * Two things make it affordable:
+ *
+ *   Click to load. Nothing from giscus.app is requested until the reader asks
+ *   for it. That keeps the page at zero third-party bytes for the ~95% who
+ *   never open comments, and it means no third party sees a request from a
+ *   reader who did not opt in.
+ *
+ *   No categoryId, no script. Until GISCUS.categoryId is filled in (see
+ *   src/lib/site.ts for why it cannot be derived here), this renders a plain
+ *   link to the repo's Discussions. A comment box that silently fails to load
+ *   is worse than a link that works.
+ *
+ * Moderation lives entirely on GitHub, which is the point: it is manageable
+ * from a phone, and the GitHub mobile app already sends notifications.
+ */
+
+import { GISCUS, SITE, giscusReady } from '../../lib/site.ts';
+
+interface Props {
+  /** Discussion mapping term. Stable per page — never regenerate it. */
+  term: string;
+}
+
+const { term } = Astro.props;
+
+const discussionsUrl = `${SITE.repo}/discussions`;
+const searchUrl = `${discussionsUrl}?discussions_q=${encodeURIComponent(term)}`;
+---
+
+<section class="comments" aria-labelledby="comments-heading">
+  <h2 id="comments-heading">النقاش</h2>
+
+  {giscusReady ? (
+    <div
+      class="giscus-mount"
+      data-term={term}
+      data-repo={GISCUS.repo}
+      data-repo-id={GISCUS.repoId}
+      data-category={GISCUS.category}
+      data-category-id={GISCUS.categoryId}
+    >
+      <p class="comments-note">
+        التعليقات بتشتغل على GitHub Discussions. اضغط عشان تحمّلها — مش هيتبعت أي
+        طلب لأي طرف تالت قبل كده.
+      </p>
+      <button type="button" class="comments-load">حمّل التعليقات</button>
+    </div>
+  ) : (
+    <p class="comments-note">
+      لو عندك سؤال أو لقيت غلطة في الصفحة دي، اكتبها في
+      <a href={searchUrl} rel="noopener">النقاشات على GitHub</a>.
+      كل صفحة ليها موضوعها الخاص.
+    </p>
+  )}
+</section>
+
+{giscusReady && (
+  <script is:inline>
+    (function () {
+      var mount = document.querySelector('.giscus-mount');
+      if (!mount) return;
+      var btn = mount.querySelector('.comments-load');
+      btn.addEventListener('click', function () {
+        btn.disabled = true;
+        btn.textContent = 'جارٍ التحميل…';
+        var s = document.createElement('script');
+        s.src = 'https://giscus.app/client.js';
+        s.async = true;
+        s.crossOrigin = 'anonymous';
+        s.setAttribute('data-repo', mount.dataset.repo);
+        s.setAttribute('data-repo-id', mount.dataset.repoId);
+        s.setAttribute('data-category', mount.dataset.category);
+        s.setAttribute('data-category-id', mount.dataset.categoryId);
+        s.setAttribute('data-mapping', 'specific');
+        s.setAttribute('data-term', mount.dataset.term);
+        s.setAttribute('data-reactions-enabled', '1');
+        s.setAttribute('data-emit-metadata', '0');
+        s.setAttribute('data-input-position', 'top');
+        s.setAttribute(
+          'data-theme',
+          document.documentElement.getAttribute('data-theme') === 'light'
+            ? 'light'
+            : 'dark'
+        );
+        s.setAttribute('data-lang', 'ar');
+        s.setAttribute('data-loading', 'lazy');
+        mount.appendChild(s);
+      });
+    })();
+  </script>
+)}
+
+<style>
+  .comments {
+    margin-block-start: var(--sp-8);
+    padding-block-start: var(--sp-5);
+    border-block-start: 1px solid var(--border);
+  }
+  .comments-note {
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+  }
+  .comments-load {
+    font: inherit;
+    font-size: var(--fs-sm);
+    min-block-size: var(--tap-min);
+    padding-inline: var(--sp-5);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-ui);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .comments-load:hover:not(:disabled) { border-color: var(--accent); }
+  .comments-load:disabled { opacity: 0.5; cursor: progress; }
+
+  @media print {
+    .comments { display: none; }
+  }
+</style>

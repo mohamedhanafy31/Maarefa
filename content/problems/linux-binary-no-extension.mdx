@@ -1,0 +1,89 @@
+---
+title: 'فين الملف التنفيذي بعد cargo build؟'
+slug: linux-binary-no-extension
+description: بنيت المشروع وملقتش الملف التنفيذي — ليه هو مالوش امتداد على لينكس وماك، وفين بيتحط بالظبط جوه target، وإزاي تشغّله بنفسك.
+symptom: 'cargo build finished but no .exe — where is the binary?'
+published: true
+updated: 2026-08-13
+relatedLessons:
+  - first-program
+---
+
+## العَرَض
+
+شغّلت `cargo build`، الأمر خلص من غير أي خطأ:
+
+```
+   Compiling hello v0.1.0 (/home/user/hello)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.09s
+```
+
+وبعدين بصيت في مجلد المشروع وملقتش أي ملف تنفيذي. لو إنت جاي من ويندوز، إنت
+بتدور على `hello.exe` — والملف موجود فعلاً بس اسمه `hello` من غير أي امتداد.
+
+## السبب
+
+حاجتين مختلفتين بيحصلوا مع بعض:
+
+**الأولى: الملف مش في مجلد المشروع.** `cargo` بيحط كل ناتج البناء في `target/`،
+مش جنب `src/`. ملف الـ debug بيقع في `target/debug/` واسمه هو اسم الحزمة في
+`Cargo.toml`.
+
+**التانية: لينكس و‏macOS مش بيستخدموا الامتدادات عشان يعرفوا الملف تنفيذي ولا لأ.**
+اللي بيحدد ده هو **بِت الصلاحية** `x` في صلاحيات الملف، مش الاسم. ويندوز هو اللي
+محتاج `.exe`، وعلى ويندوز فعلاً `cargo` بيطلّع `hello.exe`.
+
+## الحل
+
+بص جوه `target/debug/`:
+
+```
+$ ls -F target/debug
+build/  deps/  examples/  hello*  hello.d  incremental/
+```
+
+`hello` من غير امتداد هو الملف. علامة `*` اللي `ls -F` حطاها جنبه معناها إن
+بِت التنفيذ مفعّل.
+
+وتقدر تشغّله على طول:
+
+```
+$ ./target/debug/hello
+Hello, world!
+```
+
+الـ `./` في الأول مش زيادة — من غيرها الـ shell بيدوّر على أمر اسمه `hello` في
+مسارات النظام بس، ومش بيبص في المجلد اللي إنت فيه.
+
+## إزاي تتأكد إن ده هو فعلاً
+
+```
+$ file target/debug/hello
+target/debug/hello: ELF 64-bit LSB pie executable, x86-64, ... with debug_info, not stripped
+```
+
+`ELF ... executable` معناها ملف تنفيذي على لينكس. و`with debug_info, not
+stripped` بتفسر ليه حجمه كبير — ده بناء debug، جواه معلومات كاملة للمصحّح.
+
+## ليه بيحصل ده
+
+`cargo` بيعزل ناتج البناء عن الكود المصدري عن قصد. `target/` بيبقى فيه ملفات
+كتير جداً — نتايج وسيطة، تبعيات مترجمة، ملفات بناء تدريجي — ولو دي اتخلطت مع
+`src/` كان المشروع بقى فوضى، وكان لازم تكتب قواعد تجاهل معقدة في `.gitignore`.
+
+عشان كده `cargo new` بيولّد `.gitignore` فيه سطر واحد بس: `/target`.
+
+في الاستخدام العادي مش هتحتاج تدور على الملف أصلاً — `cargo run` بيبني ويشغّل
+في خطوة واحدة، وبيقولك مسار الملف اللي شغّله:
+
+```
+   Compiling hello v0.1.0 (/home/user/hello)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.09s
+     Running `target/debug/hello`
+Hello, world!
+```
+
+السطر `Running` ده هو إجابة السؤال كل مرة.
+
+الشرح الكامل للأوامر التلاتة — `build` و`run` و`check` — وإمتى تستخدم كل واحد،
+في درس [أول برنامج](/rust/getting-started/first-program/).

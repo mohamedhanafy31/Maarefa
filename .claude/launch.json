@@ -4,8 +4,11 @@
     {
       "name": "maarefa-preview",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["preview", "--port", "4321"],
-      "port": 4321
+      "runtimeArgs": [
+        "preview"
+      ],
+      "port": 4321,
+      "autoPort": true
     }
   ]
 }

@@ -20,17 +20,33 @@ import { getCollection } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 
 
-// ── Full curriculum from CURRICULUM.md §2 + PLAN.md §2 ──────────────────────
-// Slugs for existing/launch lessons come from the frontmatter in content/.
-// Slugs for future lessons are anticipated (PLAN.md directory names without
-// the numeric prefix). Decision documented in report item 4.
+// ── The shape of the whole track ────────────────────────────────────────────
+//
+// This array holds ONLY the lessons that are not written yet. Published lessons
+// are read from the collection, so a slug can never drift between the two.
+//
+// It used to list every lesson including the written ones, and that produced a
+// silent bug of exactly the kind this file is prone to: it carried
+// `install` / `editor-setup` while the frontmatter said
+// `install-rust` / `setup-editor`, so two finished lessons rendered as
+// "قادم قريباً" with no error anywhere. A hardcoded copy of data that also
+// exists in content/ will drift; the fix is to not keep the copy.
+//
+// Titles here come from CURRICULUM.md §2. Slugs are ANTICIPATED — when the
+// lesson is written, whatever slug its frontmatter declares wins, and the entry
+// below simply stops matching and drops out.
+//
+// Unwritten lessons are appended after the published ones, which yields the
+// right order for every module in the current curriculum: module 1 has 1.4
+// last, module 2 has 2.3–2.5 last, modules 3–5 are entirely unwritten.
 
 type CurriculumLesson = { title: string; slug: string };
 type CurriculumModule = {
   id: string;
   titleAr: string;
   titleEn: string;
-  lessons: CurriculumLesson[];
+  /** Not yet written. Rendered as plain text with a قادم قريباً badge. */
+  upcoming: CurriculumLesson[];
 };
 
 const CURRICULUM: CurriculumModule[] = [
@@ -38,57 +54,45 @@ const CURRICULUM: CurriculumModule[] = [
     id: 'getting-started',
     titleAr: 'البداية',
     titleEn: 'Getting Started',
-    lessons: [
-      { title: 'ليه Rust؟ وإيه اللي هتتعلمه', slug: 'why-rust' },
-      { title: 'تثبيت Rust',                   slug: 'install' },
-      { title: 'تجهيز بيئة العمل',              slug: 'editor-setup' },
-      { title: 'أول برنامج',                    slug: 'first-program' },
-    ],
+    upcoming: [],
   },
   {
     id: 'foundations',
     titleAr: 'الأساسيات',
     titleEn: 'Foundations',
-    lessons: [
-      { title: 'المتغيرات والقابلية للتغيير', slug: 'variables' },
-      { title: 'أنواع البيانات',               slug: 'data-types' },
-      { title: 'الدوال',                       slug: 'functions' },
-      // 1.4 التحكم في المسار — deferred to period 2 (CLAUDE.md C1, CURRICULUM.md §3)
-      { title: 'التحكم في المسار',              slug: 'control-flow' },
-    ],
+    // 1.4 deferred to period 2 (CLAUDE.md C1, CURRICULUM.md §3).
+    upcoming: [{ title: 'التحكم في المسار', slug: 'control-flow' }],
   },
   {
     id: 'ownership',
     titleAr: 'الملكية',
     titleEn: 'Ownership',
-    lessons: [
-      { title: 'الستاك والهيب',               slug: 'stack-heap' },
-      { title: 'الملكية والنقل',              slug: 'move' },
-      { title: 'الاستعارة',                   slug: 'borrow' },
-      { title: 'الاستعارة القابلة للتغيير',   slug: 'borrow-mut' },
-      { title: 'الشرائح',                     slug: 'slices' },
+    upcoming: [
+      { title: 'الاستعارة', slug: 'borrow' },
+      { title: 'الاستعارة القابلة للتغيير', slug: 'borrow-mut' },
+      { title: 'الشرائح', slug: 'slices' },
     ],
   },
   {
     id: 'structuring',
     titleAr: 'البنى',
     titleEn: 'Structuring Data',
-    lessons: [
-      { title: 'الـ Structs',                     slug: 'structs' },
-      { title: 'الـ Enums',                       slug: 'enums' },
-      { title: 'مطابقة الأنماط',                  slug: 'pattern-matching' },
-      { title: 'Option',                           slug: 'option' },
-      { title: 'Result ومعالجة الأخطاء',           slug: 'result-error-handling' },
+    upcoming: [
+      { title: 'الـ Structs', slug: 'structs' },
+      { title: 'الـ Enums', slug: 'enums' },
+      { title: 'مطابقة الأنماط', slug: 'pattern-matching' },
+      { title: 'Option', slug: 'option' },
+      { title: 'Result ومعالجة الأخطاء', slug: 'result-error-handling' },
     ],
   },
   {
     id: 'abstraction',
     titleAr: 'التجريد',
     titleEn: 'Generics, Traits, Lifetimes',
-    lessons: [
-      { title: 'الأنواع العامة',                   slug: 'generics' },
-      { title: 'السمات',                           slug: 'traits' },
-      { title: 'دورات الحياة',                     slug: 'lifetimes' },
+    upcoming: [
+      { title: 'الأنواع العامة', slug: 'generics' },
+      { title: 'السمات', slug: 'traits' },
+      { title: 'دورات الحياة', slug: 'lifetimes' },
       { title: 'الإرسال الساكن مقابل الديناميكي', slug: 'static-vs-dynamic' },
     ],
   },
@@ -96,27 +100,46 @@ const CURRICULUM: CurriculumModule[] = [
     id: 'practical',
     titleAr: 'Rust عملي',
     titleEn: 'Practical Rust',
-    lessons: [
-      { title: 'المجموعات',                        slug: 'collections' },
-      { title: 'أنماط معالجة الأخطاء',             slug: 'error-patterns' },
-      { title: 'الوحدات والحزم',                   slug: 'modules-packages' },
-      { title: 'الاختبارات',                       slug: 'testing' },
-      { title: 'التجريدات صفرية التكلفة',          slug: 'zero-cost-abstractions' },
+    upcoming: [
+      { title: 'المجموعات', slug: 'collections' },
+      { title: 'أنماط معالجة الأخطاء', slug: 'error-patterns' },
+      { title: 'الوحدات والحزم', slug: 'modules-packages' },
+      { title: 'الاختبارات', slug: 'testing' },
+      { title: 'التجريدات صفرية التكلفة', slug: 'zero-cost-abstractions' },
     ],
   },
 ];
 
-// ── Resolve which lessons exist in the collection ────────────────────────────
-// Only PUBLISHED lessons get links. Draft entries are excluded from all indexes
-// (PLAN.md §4 rule 5).
+// ── Merge: published entries first (authoritative), then the unwritten ──────
+// Draft entries (published:false) appear in NEITHER list — they are excluded
+// from every index (PLAN.md §4 rule 5).
 
 const allLessons = await getCollection('lessons');
-// Build lookup: slug → collection entry (published only)
-const publishedBySlug = new Map(
-  allLessons
-    .filter((l) => l.data.published)
-    .map((l) => [l.data.slug, l]),
-);
+
+const publishedByModule = new Map<string, typeof allLessons>();
+for (const l of allLessons) {
+  if (!l.data.published) continue;
+  const list = publishedByModule.get(l.data.module) ?? [];
+  list.push(l);
+  publishedByModule.set(l.data.module, list);
+}
+for (const list of publishedByModule.values()) {
+  list.sort((a, b) => a.data.order - b.data.order);
+}
+
+const modules = CURRICULUM.map((mod) => {
+  const live = (publishedByModule.get(mod.id) ?? []).map((l) => ({
+    title: l.data.title,
+    slug: l.data.slug,
+    isLive: true,
+  }));
+  const liveSlugs = new Set(live.map((l) => l.slug));
+  const soon = mod.upcoming
+    .filter((u) => !liveSlugs.has(u.slug))
+    .map((u) => ({ ...u, isLive: false }));
+  return { ...mod, lessons: [...live, ...soon] };
+});
+
 
 function lessonUrl(moduleId: string, slug: string): string {
   return `/rust/${moduleId}/${slug}/`;
@@ -138,7 +161,7 @@ const pageDescription =
     </header>
 
     <div class="modules-list">
-      {CURRICULUM.map((mod, modIdx) => (
+      {modules.map((mod, modIdx) => (
         <section class="module-card" aria-labelledby={`module-${mod.id}-heading`}>
           <header class="module-card-header">
             <!-- Western numeral for module number (CLAUDE.md C2) -->
@@ -155,8 +178,7 @@ const pageDescription =
 
           <ol class="lesson-list">
             {mod.lessons.map((lesson, lessonIdx) => {
-              const entry = publishedBySlug.get(lesson.slug);
-              const isLive = entry !== undefined;
+              const isLive = lesson.isLive;
               return (
                 <li class={`lesson-item ${isLive ? 'lesson-live' : 'lesson-soon'}`}>
                   <!-- Western numeral for lesson position -->

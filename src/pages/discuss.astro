@@ -1,0 +1,106 @@
+---
+/**
+ * /discuss/ — where conversation happens.
+ *
+ * Everything routes to GitHub on purpose. The author is offline ~20 days a
+ * month and phone-only when away, so anything needing moderation has to live
+ * somewhere the GitHub mobile app already notifies about. A custom comment
+ * system would be a thing that needs watching, and nothing here may need
+ * watching (CLAUDE.md, hard constraints).
+ */
+
+import Base from '../layouts/Base.astro';
+import { SITE, SITE_URL } from '../lib/site.ts';
+
+const description =
+  'اسأل، أو بلّغ عن غلطة، أو اقترح درس — كل النقاش على GitHub، وكل صفحة ليها موضوعها الخاص.';
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: 'النقاش',
+  description,
+  inLanguage: 'ar',
+  url: new URL('/discuss/', SITE_URL).href,
+};
+
+const CHANNELS = [
+  {
+    title: 'سؤال عن درس',
+    href: `${SITE.repo}/discussions`,
+    body: 'كل درس ليه موضوع نقاش خاص بيه في آخر الصفحة. اسأل هناك عشان السؤال والإجابة يفضلوا مع الدرس.',
+    cta: 'النقاشات',
+  },
+  {
+    title: 'غلطة في المحتوى',
+    href: `${SITE.repo}/issues/new?labels=problem-report&template=problem-report.yml`,
+    body: 'رسالة خطأ مش مطابقة، رقم غلط، كود مش بيترجم، أو رابط مكسور. دي أهم مساهمة ممكن تقدمها — المحتوى ده بيعلّم ناس.',
+    cta: 'بلّغ عن غلطة',
+  },
+  {
+    title: 'اقتراح درس أو موضوع',
+    href: `${SITE.repo}/discussions/new?category=ideas`,
+    body: 'فيه حاجة وقفت معاك ومفيش شرح عربي كويس ليها؟ قولها. المنهج بيتحدد من ده جزئياً.',
+    cta: 'اقترح',
+  },
+  {
+    title: 'الكود نفسه',
+    href: `${SITE.repo}`,
+    body: 'الموقع مفتوح المصدر. لو عايز تصلّح حاجة بنفسك، الـ pull requests مفتوحة.',
+    cta: 'المستودع',
+  },
+];
+---
+
+<Base title="النقاش" description={description} schema={schema}>
+  <main class="wrap" id="main">
+    <h1>النقاش</h1>
+    <p class="lede">
+      كل النقاش بيحصل على GitHub. مفيش تسجيل منفصل هنا ومفيش حسابات — لو عندك
+      حساب GitHub، إنت جاهز.
+    </p>
+
+    <ul class="channels">
+      {CHANNELS.map((c) => (
+        <li>
+          <h2>{c.title}</h2>
+          <p>{c.body}</p>
+          <a href={c.href} rel="noopener">{c.cta} ↗</a>
+        </li>
+      ))}
+    </ul>
+
+    <section class="why">
+      <h2>ليه GitHub مش نظام تعليقات هنا</h2>
+      <p>
+        الموقع ده ستاتيك بالكامل: مفيش خادم، مفيش قاعدة بيانات، ومفيش أي حاجة
+        محتاجة تتراقب أو تتعاد تشغيلها. نظام تعليقات خاص كان هيكسر ده كله،
+        وكان هيبقى محتاج إشراف يومي — والموقع متصمَّم عشان يفضل شغال من غير أي
+        متابعة.
+      </p>
+      <p>
+        GitHub بيدي الإشراف والإشعارات والبحث مجاناً، وبيشتغل من الموبايل.
+      </p>
+    </section>
+  </main>
+</Base>
+
+<style>
+  .lede { font-size: var(--fs-lg); color: var(--text-muted); }
+  .channels {
+    list-style: none;
+    padding: 0;
+    margin-block: var(--sp-6);
+    display: grid;
+    gap: var(--sp-4);
+  }
+  .channels li {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ui);
+    background: var(--surface);
+    padding: var(--sp-4);
+  }
+  .channels h2 { margin-block: 0 var(--sp-2); font-size: var(--fs-lg); }
+  .channels p { margin-block-end: var(--sp-3); color: var(--text-muted); }
+  .why { margin-block-start: var(--sp-7); }
+</style>

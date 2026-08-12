@@ -1,0 +1,105 @@
+---
+/**
+ * Lesson 1.1 — shadowing vs mutation, side by side.
+ *
+ * The two panels answer the question the lesson is built around: both let you
+ * "change" x, so what is actually different? Left panel: one binding, one slot,
+ * the value overwritten. Right panel: a NEW binding each time, so the type is
+ * free to change and the old value is simply no longer reachable by that name.
+ *
+ * Values verified by running the samples — see the lesson body.
+ */
+
+const mut = [
+  { code: 'let mut x = 5;', slot: 'x', value: '5', note: 'خانة واحدة اتعملت' },
+  { code: 'x = 6;', slot: 'x', value: '6', note: 'نفس الخانة، القيمة اتكتبت فوقها' },
+  { code: 'x = x * 2;', slot: 'x', value: '12', note: 'نفس الخانة تاني — النوع ثابت' },
+];
+
+const shadow = [
+  { code: 'let x = 5;', slot: 'x', value: '5', note: 'خانة أولى' },
+  { code: 'let x = x + 1;', slot: 'x', value: '6', note: 'خانة جديدة، الأولى مش موجودة بالاسم ده' },
+  { code: 'let x = "ستة";', slot: 'x', value: '"ستة"', note: 'خانة تالتة — والنوع اتغيّر' },
+];
+
+const ROW = 62;
+const H = 40 + Math.max(mut.length, shadow.length) * ROW + 16;
+---
+
+<figure class="sv-figure">
+  <div class="sv-scroll">
+    <svg
+      viewBox={`0 0 660 ${H}`}
+      width="660"
+      height={H}
+      role="img"
+      aria-label="مقارنة بين mut والظل: mut بيكتب فوق نفس الخانة والنوع بيفضل ثابت، والظل بيعمل خانة جديدة كل مرة والنوع ينفع يتغيّر"
+      class="sv-svg"
+    >
+      <text x="325" y="20" class="sv-head" text-anchor="middle">mut — خانة واحدة</text>
+      <text x="655" y="20" class="sv-head" text-anchor="end">الظل — خانة جديدة كل مرة</text>
+
+      {mut.map((r, i) => {
+        const y = 40 + i * ROW;
+        return (
+          <>
+            <text x="10" y={y + 16} class="sv-code">{r.code}</text>
+            <rect x="200" y={y} width="86" height="30" rx="2" class="sv-box is-mut" />
+            <text x="243" y={y + 20} class="sv-val" text-anchor="middle">{r.value}</text>
+            <text x="200" y={y + 46} class="sv-note">{r.note}</text>
+          </>
+        );
+      })}
+
+      <line x1="330" y1="30" x2="330" y2={H - 10} class="sv-divide" />
+
+      {shadow.map((r, i) => {
+        const y = 40 + i * ROW;
+        return (
+          <>
+            <text x="345" y={y + 16} class="sv-code">{r.code}</text>
+            <rect x={520 + i * 8} y={y} width="86" height="30" rx="2" class="sv-box is-shadow" />
+            <text x={563 + i * 8} y={y + 20} class="sv-val" text-anchor="middle">{r.value}</text>
+            <text x="655" y={y + 46} class="sv-note" text-anchor="end">{r.note}</text>
+          </>
+        );
+      })}
+    </svg>
+  </div>
+  <figcaption>
+    على الشمال: <code dir="ltr">mut</code> بيعيد الكتابة في نفس الخانة، والنوع
+    مقفول. على اليمين: كل <code dir="ltr">let</code> بيعمل خانة جديدة، فالنوع حر
+    يتغيّر.
+  </figcaption>
+</figure>
+
+<style>
+  .sv-figure { margin-block: var(--sp-6); margin-inline: 0; }
+  .sv-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ui);
+    background: var(--surface);
+    padding: var(--sp-2);
+  }
+  .sv-svg { display: block; max-inline-size: none; }
+  .sv-head { font-family: var(--font-sans); font-size: 13px; fill: var(--text); font-weight: 600; }
+  /* Rust source: LTR, isolated so a trailing quote or semicolon cannot jump
+     to the wrong side of an embedded Arabic string literal. */
+  .sv-code {
+    font-family: var(--font-mono); font-size: 13px; fill: var(--text-muted);
+    direction: ltr; unicode-bidi: isolate;
+  }
+  .sv-val { font-family: var(--font-mono); font-size: 13px; fill: var(--text); }
+  .sv-note { font-family: var(--font-sans); font-size: 11px; fill: var(--text-muted); }
+  .sv-box { fill: none; stroke-width: 2; }
+  .sv-box.is-mut { stroke: var(--mem-borrowed-mut); }
+  .sv-box.is-shadow { stroke: var(--mem-owned); }
+  .sv-divide { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; }
+  figcaption {
+    margin-block-start: var(--sp-2);
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    line-height: var(--lh-body);
+  }
+</style>

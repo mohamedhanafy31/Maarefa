@@ -1,0 +1,109 @@
+---
+/**
+ * Lesson 1.2 — how big the integer types actually are.
+ *
+ * Every bound below is printed output, not arithmetic done here:
+ *
+ *   $ cargo run     # rustc 1.97.1 (8bab26f4f 2026-07-14)
+ *      i8   1 bytes                   -128 .. 127
+ *      u8   1 bytes                      0 .. 255
+ *     i16   2 bytes                 -32768 .. 32767
+ *     u16   2 bytes                      0 .. 65535
+ *     i32   4 bytes            -2147483648 .. 2147483647
+ *     u32   4 bytes                      0 .. 4294967295
+ *     i64   8 bytes   -9223372036854775808 .. 9223372036854775807
+ *     u64   8 bytes                      0 .. 18446744073709551615
+ *
+ * The bars are LOGARITHMIC and the caption says so. A linear scale would draw
+ * u8 as a bar 2^56 times shorter than u64 — mathematically honest, visually
+ * useless, and it would teach nothing about the eight steps between them.
+ */
+
+const types = [
+  { name: 'i8', bytes: 1, min: '-128', max: '127', bits: 8 },
+  { name: 'u8', bytes: 1, min: '0', max: '255', bits: 8 },
+  { name: 'i16', bytes: 2, min: '-32768', max: '32767', bits: 16 },
+  { name: 'u16', bytes: 2, min: '0', max: '65535', bits: 16 },
+  { name: 'i32', bytes: 4, min: '-2147483648', max: '2147483647', bits: 32 },
+  { name: 'u32', bytes: 4, min: '0', max: '4294967295', bits: 32 },
+  { name: 'i64', bytes: 8, min: '-9223372036854775808', max: '9223372036854775807', bits: 64 },
+  { name: 'u64', bytes: 8, min: '0', max: '18446744073709551615', bits: 64 },
+];
+
+const ROW = 30;
+const H = 34 + types.length * ROW + 8;
+const BAR_X = 60;
+const BAR_MAX = 210;
+---
+
+<figure class="ir-figure">
+  <div class="ir-scroll" dir="ltr">
+    <svg
+      viewBox={`0 0 660 ${H}`}
+      width="660"
+      height={H}
+      role="img"
+      aria-label="أحجام الأنواع الصحيحة في Rust: i8 و u8 بايت واحد، i16 و u16 بايتين، i32 و u32 أربع بايتات، i64 و u64 تمن بايتات — والمدى بيتضاعف مع كل خطوة"
+      class="ir-svg"
+    >
+      <text x="8" y="16" class="ir-head">type</text>
+      <text x={BAR_X} y="16" class="ir-head">bits</text>
+      <text x="290" y="16" class="ir-head">min</text>
+      <text x="470" y="16" class="ir-head">max</text>
+
+      {types.map((t, i) => {
+        const y = 34 + i * ROW;
+        // Logarithmic: width tracks BIT COUNT, so each doubling of the type
+        // is a constant visual step. See the note at the top of this file.
+        const w = (t.bits / 64) * BAR_MAX;
+        const signed = t.name.startsWith('i');
+        return (
+          <>
+            <text x="8" y={y + 14} class="ir-name">{t.name}</text>
+            <rect
+              x={BAR_X}
+              y={y + 3}
+              width={w}
+              height="15"
+              rx="2"
+              class={`ir-bar ${signed ? 'is-signed' : 'is-unsigned'}`}
+            />
+            <text x={BAR_X + w + 6} y={y + 14} class="ir-bits">{t.bits}</text>
+            <text x="290" y={y + 14} class="ir-num">{t.min}</text>
+            <text x="470" y={y + 14} class="ir-num">{t.max}</text>
+          </>
+        );
+      })}
+    </svg>
+  </div>
+  <figcaption>
+    الأعمدة بمقياس لوغاريتمي — طول العمود بيتبع عدد الـ bits، مش المدى نفسه. لو
+    كانت بمقياس خطي، عمود <code dir="ltr">u8</code> كان هيبقى أقصر من
+    <code dir="ltr">u64</code> بـ 2 أُس 56 مرة، ومكنتش هتشوف حاجة أصلاً.
+    الملوّن الغامق للأنواع اللي بتقبل السالب.
+  </figcaption>
+</figure>
+
+<style>
+  .ir-figure { margin-block: var(--sp-6); margin-inline: 0; }
+  .ir-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ui);
+    background: var(--surface);
+    padding: var(--sp-2);
+  }
+  .ir-svg { display: block; max-inline-size: none; }
+  .ir-head { font-family: var(--font-mono); font-size: 11px; fill: var(--text-muted); }
+  .ir-name { font-family: var(--font-mono); font-size: 13px; fill: var(--text); font-weight: 700; }
+  .ir-bits { font-family: var(--font-mono); font-size: 11px; fill: var(--text-muted); }
+  .ir-num { font-family: var(--font-mono); font-size: 11px; fill: var(--text-muted); }
+  .ir-bar.is-signed { fill: var(--mem-borrowed); }
+  .ir-bar.is-unsigned { fill: var(--mem-owned); opacity: 0.62; }
+  figcaption {
+    margin-block-start: var(--sp-2);
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    line-height: var(--lh-body);
+  }
+</style>

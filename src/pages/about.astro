@@ -1,0 +1,137 @@
+---
+/**
+ * /about/ — who writes this and why.
+ *
+ * CURRICULUM.md §1: "the About page carries a real name, background, and what
+ * the author actually builds. For technical content this raises credibility
+ * substantially, and it is the mechanism by which the site converts into
+ * professional reputation."
+ *
+ * ⚠ THE BIOGRAPHY BELOW IS A PLACEHOLDER AND IS MARKED AS ONE ON THE PAGE.
+ *
+ * The name and the GitHub handle are real — they come from the repository. The
+ * background, the employer, the projects: those are facts about a person, and
+ * inventing them would be fabrication of exactly the kind the whole site is
+ * built to avoid. They have to be written by the author.
+ *
+ * Replace the block marked AUTHOR-BIO and delete the notice component. Nothing
+ * else on this page needs to change.
+ */
+
+import Base from '../layouts/Base.astro';
+import { SITE, SITE_URL } from '../lib/site.ts';
+
+const description =
+  'مين بيكتب معرفة وليه — المنهج اللي الموقع ماشي عليه في دقة المعلومة، وإزاي تتواصل أو تصلّح غلطة.';
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'AboutPage',
+  name: 'عن الموقع',
+  description,
+  inLanguage: 'ar',
+  url: new URL('/about/', SITE_URL).href,
+};
+---
+
+<Base title="عن الموقع" description={description} schema={schema}>
+  <main class="wrap" id="main">
+    <h1>عن الموقع</h1>
+
+    <p class="lede">
+      <strong>{SITE.name}</strong> ({SITE.nameLatin}) — {SITE.tagline}.
+    </p>
+
+    <h2>ليه الموقع ده موجود</h2>
+    <p>
+      المحتوى العربي في برمجة الأنظمة قليل، واللي موجود منه معظمه بيترجم
+      التوثيق: بيقولك إيه القاعدة، مش ليه هي كده. والنتيجة إن الواحد بيحفظ
+      القواعد وبيقع أول ما يقابل حالة مش مغطاة فيها.
+    </p>
+    <p>
+      الموقع ده بيحاول يعمل تلات حاجات مش موجودة تقريباً بالعربي:
+    </p>
+    <ul>
+      <li><strong>شرح بصري لميكانيكا الذاكرة</strong> — تشوف اللي بيحصل، مش تتخيله.</li>
+      <li><strong>الأسمبلي المولّد جنب الكود المصدري</strong> — عشان تعرف اللي كتبته بيتحول لإيه.</li>
+      <li><strong>مكتبة مشاكل مكتوبة من تصحيح حقيقي</strong> — برسايل الخطأ بالحرف.</li>
+    </ul>
+
+    <h2>المنهج في دقة المعلومة</h2>
+    <p>
+      المادة دي تعليمية، والشرح الغلط بيبني نموذج ذهني غلط بيفضل معاك سنين. عشان
+      كده الموقع ماشي على قواعد مكتوبة ومطبّقة في البناء نفسه:
+    </p>
+    <ul>
+      <li>
+        كل رسالة خطأ منقولة بالحرف من تشغيل حقيقي، ومعاها إصدار الكومبايلر —
+        صيغة الرسايل بتتغير بين الإصدارات، والاقتباس من غير إصدار بيبقى مضلل بعد
+        شوية.
+      </li>
+      <li>كل مثال كود اتترجم فعلاً قبل النشر.</li>
+      <li>الأسمبلي بييجي من ترجمة حقيقية، مش مكتوب بالإيد.</li>
+      <li>لو حاجة مش متأكد منها، بتتشال — مش بتتكتب بصيغة مطاطة.</li>
+    </ul>
+    <p>
+      لو لقيت غلطة، دي مش مجاملة — دي إصلاح لحاجة بتعلّم ناس. اكتبها في
+      <a href={`${SITE.repo}/issues`} rel="noopener">صفحة المشاكل على GitHub</a>
+      أو في <a href="/discuss/">النقاش</a>.
+    </p>
+
+    <h2>مين بيكتب ده</h2>
+
+    <!-- AUTHOR-BIO — see the file header. -->
+    <div class="placeholder" role="note">
+      <p class="placeholder-tag">القسم ده لسه متكتبش</p>
+      <p>
+        الاسم والحساب تحت حقيقيين. الباقي — الخلفية والشغل والمشاريع — لازم
+        يتكتب بإيد صاحب الموقع، مش يتولّد. الموقع كله قايم على إن اللي مكتوب فيه
+        متحقَّق منه، والقاعدة دي بتنطبق على الصفحة دي قبل أي صفحة تانية.
+      </p>
+    </div>
+
+    <p>
+      <strong>محمد حنفي</strong> —
+      <a href="https://github.com/mohamedhanafy31" rel="noopener me">github.com/mohamedhanafy31</a>
+    </p>
+
+    <h2>المصدر</h2>
+    <p>
+      الموقع مفتوح المصدر بالكامل:
+      <a href={SITE.repo} rel="noopener">{SITE.repoSlug}</a>.
+      الكود تحت رخصة MIT، والمحتوى التعليمي تحت رخصة
+      <span dir="ltr">CC BY-NC-SA 4.0</span> — تقدر تشاركه وتعدّل عليه بشرط
+      الإسناد وعدم الاستخدام التجاري.
+    </p>
+
+    <h2>الأدوات</h2>
+    <p>
+      مبني بـ <span dir="ltr">Astro</span> ومستضاف على
+      <span dir="ltr">Cloudflare Pages</span>. مفيش خادم، ومفيش قاعدة بيانات،
+      ومفيش تتبّع. التحليلات بتاعت
+      <span dir="ltr">Cloudflare</span> بدون كوكيز ومش بتعرّف الزوار.
+    </p>
+  </main>
+</Base>
+
+<style>
+  .lede { font-size: var(--fs-lg); color: var(--text-muted); }
+  h2 { margin-block-start: var(--sp-7); }
+  ul { padding-inline-start: var(--sp-5); }
+  li { margin-block-end: var(--sp-2); line-height: var(--lh-body); }
+
+  .placeholder {
+    border: 1px dashed var(--mem-borrowed-mut);
+    border-radius: var(--radius-ui);
+    background: var(--surface);
+    padding: var(--sp-4);
+    margin-block: var(--sp-4);
+  }
+  .placeholder-tag {
+    margin: 0 0 var(--sp-2);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    color: var(--mem-borrowed-mut);
+  }
+  .placeholder p:last-child { margin-block-end: 0; }
+</style>
