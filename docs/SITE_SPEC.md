@@ -143,7 +143,11 @@ Add a submission form ("واجهتك مشكلة؟") that opens a **GitHub issue 
 
 ## 5. Design direction
 
-- **Dark mode default**, light toggle. Matches the audience's editor.
+- **Dark mode default, light toggle.** Matches the audience's editor.
+
+  "Default" means **dark when there is no signal** — it never means overriding an explicit user preference. If the operating system reports `prefers-color-scheme: light`, the site opens light. Someone running light system-wide may have set it for astigmatism or low vision, and overriding that is an accessibility regression, not a branding decision. An explicit choice via the toggle wins over both and persists.
+
+  Resolution order: stored toggle choice → OS preference → dark.
 - **Typography is the main lever.** Decided: **IBM Plex Sans Arabic** for Arabic and Latin prose, **JetBrains Mono with ligatures disabled** for code. Self-hosted WOFF2, subset, `font-display: swap`. Rubik was on the original shortlist and is disqualified — it ships no Arabic glyphs. Ligatures are off because `->` rendered as an arrow hides characters a beginner has to type.
 - **Line-height ≥ 1.8 for Arabic body text.** Arabic reads badly tight.
 - Restrained palette, one accent colour used deliberately.

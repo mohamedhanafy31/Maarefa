@@ -24,7 +24,12 @@ export const SITE = {
     'منصة عربية لتعلّم برمجة الأنظمة من الأساس — بصريات للذاكرة، وأسمبلي حقيقي، ومكتبة مشاكل من تصحيح فعلي.',
   lang: 'ar',
   dir: 'rtl',
-  repo: 'https://github.com/mohamedhanafy/maarefa',
+  /** Capital M — GitHub's casing. Giscus matches the repo string exactly, so
+   *  a lowercase copy here would silently fail to resolve a discussion. The
+   *  Cloudflare Pages project is separately lowercase, which is what produces
+   *  maarefa.pages.dev; the two are not required to match. */
+  repo: 'https://github.com/mohamedhanafy31/Maarefa',
+  repoSlug: 'mohamedhanafy31/Maarefa',
   /** rustc version every quoted error and assembly panel is stamped with. */
   rustcVersion: '1.97.1',
 } as const;

@@ -47,6 +47,24 @@ This is teaching material. A wrong explanation teaches a wrong mental model that
 - Every quoted error and every assembly panel **displays the rustc version it came from**. Error wording drifts between releases; an unversioned quote rots silently.
 - If a claim can't be verified, cut it rather than hedge it.
 
+### Quoted compiler output is never load-bearing for comprehension
+
+**When a lesson quotes compiler output, the Arabic prose must independently convey what the critical lines say. A learner who never scrolls the block must still get the full lesson.** The verbatim text is there for authenticity and for search — it is not the teaching.
+
+This is not a style preference; it follows from measurement. A real `E0382` block is 100 columns at its widest. A 380px phone shows 52, a 320px phone shows 43, and no amount of type-shrinking reaches 100 without becoming unreadable — the arithmetic is in `PLAN.md` §9 R-14. Wrapping is not an option either: rustc diagnostics are column-aligned, and carets stop meaning anything the moment a line reflows. So the block scrolls, with an edge shadow marking that it does.
+
+That means the reader on a phone sees the headline and the code context, and must scroll for the explanation. **The explanation is therefore duplicated in Arabic, in the prose or in the visual's step text.**
+
+Where this bites hardest is **lesson 2.2, step 6**. The line that gets cut is:
+
+```
+-- move occurs because `s1` has type `String`, which does not implement the `Copy` trait
+```
+
+That is the single most important sentence in the entire error — it is the *reason* the move happened. It must appear as Arabic explanation in the `MemoryStepper` step, not only inside the scrollable block.
+
+The verbatim text stays in the DOM regardless, so nothing is lost for search.
+
 ### Code renders as the characters actually typed
 
 No font ligatures, ever. `->` must look like a hyphen and a greater-than sign, not an arrow. A beginner cannot type a glyph they have never seen. This generalises past fonts: **nothing on this site may render code as anything other than what a learner would type into their editor** — no prettified operators, no substituted glyphs, no elided tokens.
@@ -194,6 +212,7 @@ Each is planned for a later phase, or deliberately dropped. Adding any now delay
 - [ ] Follows the seven-part template (see `docs/CURRICULUM.md` §4)
 - [ ] Every code sample compiles — verified, not assumed
 - [ ] Every quoted error message is verbatim from a real compiler run, with its rustc version shown
+- [ ] **Every critical line of quoted compiler output is also conveyed in the Arabic prose** — a reader who never scrolls the block still gets the lesson
 - [ ] Visual present where the curriculum specifies one
 - [ ] **Playwright 380px mixed-direction check passes**
 - [ ] Code blocks are `dir="ltr"`; no ligatures

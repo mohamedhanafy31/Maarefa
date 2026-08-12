@@ -51,10 +51,16 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: 'pnpm preview --port 4321',
-    url: 'http://localhost:4321',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  // Astro's preview server refuses to start a second instance and exits
+  // immediately, which Playwright reports as "webServer exited early" even
+  // though the port is healthy. Only manage the server when nothing is
+  // already listening.
+  webServer: process.env.PW_NO_SERVER
+    ? undefined
+    : {
+        command: 'pnpm preview --port 4321',
+        url: 'http://localhost:4321',
+        reuseExistingServer: true,
+        timeout: 120_000,
+      },
 });
