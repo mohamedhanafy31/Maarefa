@@ -1,0 +1,56 @@
+name: CI
+
+# Everything slow or browser-dependent runs here, NOT in the Cloudflare Pages
+# build. A Pages build that needs a browser is a Pages build that fails while
+# the author is away with no laptop. CI failures arrive as a phone notification
+# against a commit; the last good deploy stays live either way.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Types
+        run: pnpm check
+
+      - name: Logical CSS properties
+        run: pnpm check:props
+
+      # Guards R-5. A subset that drops the Arabic joining lookups renders
+      # disconnected letters and fails partially, so it survives a casual look.
+      - name: Font subsets still shape Arabic
+        run: |
+          python3 -m pip install --quiet fonttools brotli uharfbuzz
+          python3 scripts/verify-fonts.py
+
+      - name: Build
+        run: pnpm build
+
+      - name: JavaScript budget
+        run: pnpm check:budget
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - name: RTL at 320 / 380 / 768 / 1440
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

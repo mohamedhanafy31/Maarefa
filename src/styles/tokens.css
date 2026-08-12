@@ -61,6 +61,10 @@
   --lh-body:  1.85;
   --lh-code:  1.65;
 
+  /* Edge shadow marking that a code block has more content off-screen.
+   * Dark needs a true shadow; light needs it stronger to read at all. */
+  --scroll-shadow: rgba(0, 0, 0, 0.70);
+
   --measure: 68ch;
 
   /* ── space ────────────────────────────────────────────────────── */
@@ -103,6 +107,8 @@
   --mem-heap-bg:      #EAEEF2;
   --mem-static-bg:    #EEF1F4;
   --mem-tint:         0.12;
+
+  --scroll-shadow: rgba(31, 35, 40, 0.34);
 }
 
 @media (prefers-reduced-motion: reduce) {

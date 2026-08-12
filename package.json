@@ -12,7 +12,9 @@
     "fonts:verify": "python3 scripts/verify-fonts.py",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "build:ci": "astro check && astro build && node scripts/check-links.mjs && node scripts/check-budget.mjs"
+    "build:ci": "astro check && node scripts/check-logical-props.mjs && astro build && node scripts/check-budget.mjs",
+    "check:props": "node scripts/check-logical-props.mjs",
+    "check:budget": "node scripts/check-budget.mjs"
   },
   "dependencies": {
     "astro": "7.2.1",

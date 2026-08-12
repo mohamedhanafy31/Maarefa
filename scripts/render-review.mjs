@@ -15,6 +15,7 @@ const OUT = 'review';
 mkdirSync(OUT, { recursive: true });
 
 const shots = [
+  { path: '/rtl-test/', width: 320, name: 'rtl-320' },
   { path: '/rtl-test/', width: 380, name: 'rtl-380' },
   { path: '/rtl-test/', width: 768, name: 'rtl-768' },
   { path: '/rtl-test/', width: 1440, name: 'rtl-1440' },

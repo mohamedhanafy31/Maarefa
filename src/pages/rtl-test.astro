@@ -37,6 +37,7 @@ const pangram = 'نص حكيم له سر قاطع وذو شأن عظيم مكت�
       موجودة هنا، عشان أي تراجع يظهر في المكان ده الأول.
     </p>
 
+    <section id="shaping">
     <h2>1. تشكيل الحروف العربية</h2>
     <p>
       لازم الحروف تكون متصلة. لو الـ subset كسر جداول الـ GSUB، هتشوف الحروف
@@ -50,6 +51,7 @@ const pangram = 'نص حكيم له سر قاطع وذو شأن عظيم مكت�
     <p>حروف متكررة لفحص المواضع الثلاثة: ببب — ععع — سسس — مممم — هههه</p>
     <p>حروف لا تتصل من اليسار: ددد — ررر — ااا — ووو — ززز</p>
     <p>تشكيل وعلامات: مَرْحَبًا بِكُمْ — أُمّ — إِنَّ — ضَغْطٌ</p>
+    </section>
 
     <h2>2. أرقام غربية داخل نص عربي</h2>
     <p>
@@ -75,7 +77,7 @@ const pangram = 'نص حكيم له سر قاطع وذو شأن عظيم مكت�
     <p>وملف الإعدادات هو <code>~/.cargo/config.toml</code> في مجلد البيت.</p>
 
     <h2>5. بلوك كود</h2>
-    <pre dir="ltr"><code>{`fn main() {
+    <pre dir="ltr" tabindex="0"><code>{`fn main() {
     let s1 = String::from("hello");
     let s2 = s1;
     println!("{}", s2);
@@ -85,21 +87,31 @@ const pangram = 'نص حكيم له سر قاطع وذو شأن عظيم مكت�
 //   ->   =>   !=   ==   >=   <=   ::   |>   ...   www
 fn add(a: i32, b: i32) -> i32 { a + b }`}</code></pre>
 
+    <section id="error-block">
     <h2>6. رسالة خطأ حقيقية</h2>
     <p>
       من تشغيل فعلي للكومبايلر، نسخة rustc {SITE.rustcVersion}. النص ده لازم
       يفضل مقروء بالظبط زي ما هو — الناس بتلزق الرسالة دي في البحث.
     </p>
-    <pre dir="ltr"><code>{realError}</code></pre>
+    <pre dir="ltr" tabindex="0"><code>{realError}</code></pre>
+
+    </section>
 
     <h2>7. مخرجات طرفية</h2>
-    <pre dir="ltr"><code>{`$ cargo build
+    <pre dir="ltr" tabindex="0"><code>{`$ cargo build
    Compiling hello v0.1.0 (/home/user/hello)
     Finished dev [unoptimized + debuginfo] target(s) in 0.42s
 $ ls -la target/debug/hello
 -rwxrwxr-x 2 user user 3823192 Aug 12 11:04 target/debug/hello`}</code></pre>
 
-    <h2>8. جدول</h2>
+    <h2>8. بلوك قصير — لازم ما يبانش عليه ظل</h2>
+    <p>
+      البلوك ده أقصر من عرض الشاشة، يعني مفيش حاجة مخفية. الظل لازم يكون غايب
+      تماماً هنا — ده اللي بيخلي وجوده في البلوكات التانية معناه حقيقي.
+    </p>
+    <pre dir="ltr" tabindex="0"><code>{`let x = 5;`}</code></pre>
+
+    <h2>9. جدول</h2>
     <table>
       <thead>
         <tr><th>الحالة</th><th>الشكل</th><th>المعنى</th></tr>
@@ -111,14 +123,14 @@ $ ls -la target/debug/hello
       </tbody>
     </table>
 
-    <h2>9. قائمة</h2>
+    <h2>10. قائمة</h2>
     <ol>
       <li>ثبّت <code>rustup</code> من الموقع الرسمي</li>
       <li>اتأكد بـ <code>rustc --version</code></li>
       <li>افتح المشروع بـ <code>code .</code> من الترمنال</li>
     </ol>
 
-    <h2>10. تمرين قابل للطي</h2>
+    <h2>11. تمرين قابل للطي</h2>
     <details>
       <summary>شوف الحل</summary>
       <p>ضيف <code>mut</code> قبل اسم المتغير كده: <code>let mut x = 5;</code></p>

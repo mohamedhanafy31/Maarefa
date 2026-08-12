@@ -110,7 +110,16 @@ code, pre, kbd, samp, .ltr {
   white-space: nowrap;
 }
 
-/* Block code, terminal output, file paths, error text. */
+/* Block code, terminal output, file paths, error text.
+ *
+ * Never wraps: rustc diagnostics are column-aligned, and the carets under a
+ * span stop meaning anything the moment a line reflows. So these scroll.
+ *
+ * Scrolling silently is its own failure though. At 380px an E0382 block cuts
+ * the *explanation* — the carets survive, the sentence saying what they point
+ * at does not — and a learner reads a truncated diagnostic believing it is
+ * the whole message. The edge shadow below exists to prevent exactly that.
+ */
 pre {
   direction: ltr;
   unicode-bidi: isolate;
@@ -119,18 +128,67 @@ pre {
   line-height: var(--lh-code);
   margin-block: var(--sp-4);
   padding: var(--sp-4);
-  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-ui);
   /* Wide output scrolls inside its own box; the page never scrolls sideways. */
   overflow-x: auto;
   max-inline-size: 100%;
+
+  /* CSS-only scroll affordance — no JavaScript, so prose pages stay at zero.
+   *
+   * Two cover layers painted in the surface colour use `local` attachment, so
+   * they travel with the content. Two shadow layers use `scroll` attachment,
+   * so they stay pinned to the box edges. At each scroll extreme the cover
+   * sits over its shadow and hides it; when content is off-screen the cover
+   * has moved away and the shadow shows.
+   *
+   * The useful consequence: with no overflow, both covers sit at both edges
+   * and neither shadow ever appears. The affordance is present only when
+   * there is genuinely more to see. */
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(to right, var(--surface) 40%, transparent),
+    linear-gradient(to left,  var(--surface) 40%, transparent),
+    linear-gradient(to right, var(--scroll-shadow), transparent),
+    linear-gradient(to left,  var(--scroll-shadow), transparent);
+  background-position: left center, right center, left center, right center;
+  background-repeat: no-repeat;
+  background-size: 34px 100%, 34px 100%, 24px 100%, 24px 100%;
+  background-attachment: local, local, scroll, scroll;
 }
 pre code {
   background: none;
   border: 0;
   padding: 0;
   white-space: pre;
+}
+/* A scrollable region must be reachable by keyboard (WCAG 2.1.1). Applied to
+ * every pre because detecting overflow would need JavaScript. */
+pre:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Narrow viewports: buy back columns rather than let the diagnostic truncate.
+ *
+ * Three levers, in order of how much they cost the reader:
+ *   1. full-bleed — cancels the wrap's inline padding, free
+ *   2. tighter block padding — nearly free
+ *   3. smaller type — the only one that costs legibility, so it goes last
+ *
+ * Applies to `pre` only. Inline code stays at its prose size, and body text is
+ * untouched — shrinking either would trade a code problem for a reading one.
+ */
+@media (max-width: 767px) {
+  pre {
+    font-size: 0.75rem;
+    padding-inline: var(--sp-3);
+    padding-block: var(--sp-3);
+    margin-inline: calc(var(--sp-4) * -1);
+    border-radius: 0;
+    border-inline: 0;
+    max-inline-size: 100vw;
+  }
+}
+@media (max-width: 380px) {
+  pre { font-size: 0.7rem; padding-inline: var(--sp-2); }
 }
 
 /* ── tables ────────────────────────────────────────────────────── */

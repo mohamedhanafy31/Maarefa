@@ -52,4 +52,20 @@ await page.screenshot({
 });
 console.log('  review/code-380-3x.png');
 
+// The error block at 320 and 380, to check the scroll affordance is visible
+// and that the headline now fits.
+for (const w of [320, 380]) {
+  const p2 = await browser.newPage({
+    viewport: { width: w, height: 900 }, deviceScaleFactor: 3, colorScheme: 'dark',
+  });
+  await p2.goto(`${BASE}/rtl-test/`, { waitUntil: 'networkidle' });
+  await p2.evaluate(() => document.fonts.ready);
+  const pre = p2.locator('pre', { hasText: 'E0382' }).first();
+  await pre.scrollIntoViewIfNeeded();
+  await p2.waitForTimeout(120);
+  await pre.screenshot({ path: `review/error-${w}-3x.png` });
+  console.log(`  review/error-${w}-3x.png`);
+  await p2.close();
+}
+
 await browser.close();
