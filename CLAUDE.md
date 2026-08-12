@@ -1,15 +1,20 @@
-# CLAUDE.md — Fikra
+# CLAUDE.md — Maarefa
 
 Project context. Read fully before making any change.
 
-**Fikra** · Arabic Technical Knowledge — *Learn what happens beneath the code.*
+**Maarefa** (معرفة) · Arabic Technical Knowledge — *Learn what happens beneath the code.*
 
 An Arabic-first learning platform for systems programming, launching with a Rust track. Its value is in three things that barely exist in Arabic: visual explanations of memory mechanics, generated assembly shown beside source, and a troubleshooting library written from real debugging.
+
+> The name was **Fikra** in early drafts. It is **Maarefa** now, everywhere. If you find "Fikra" in any file, it is stale — fix it.
 
 Specifications live in `docs/`:
 - `docs/SITE_SPEC.md` — architecture, admin page, analytics
 - `docs/CURRICULUM.md` — brand, lesson list, launch scope
 - `docs/VISUALS.md` — the visual system (read before building any visual)
+- `docs/PROMPTS.md` — the bounded prompt sequence; work is executed in that order
+
+`PLAN.md` at the repo root is the implementation plan. Where `PLAN.md` and `docs/` disagree on a detail that §"Locked decisions" below covers, this file wins.
 
 ---
 
@@ -39,7 +44,46 @@ This is teaching material. A wrong explanation teaches a wrong mental model that
 - **Never invent Rust behaviour.** If unsure how something compiles or behaves, verify against real output — do not reason it out and present it as fact.
 - Assembly shown to learners must come from an actual compilation, never hand-written or imagined.
 - Error messages quoted in lessons and problem pages must be **verbatim** from a real compiler run. Approximate error text is worse than none — people search for the exact string.
+- Every quoted error and every assembly panel **displays the rustc version it came from**. Error wording drifts between releases; an unversioned quote rots silently.
 - If a claim can't be verified, cut it rather than hedge it.
+
+### Code renders as the characters actually typed
+
+No font ligatures, ever. `->` must look like a hyphen and a greater-than sign, not an arrow. A beginner cannot type a glyph they have never seen. This generalises past fonts: **nothing on this site may render code as anything other than what a learner would type into their editor** — no prettified operators, no substituted glyphs, no elided tokens.
+
+---
+
+## Locked decisions
+
+These supersede anything in `docs/` that contradicts them. Recorded so later sessions inherit them instead of re-deriving them.
+
+### Corrections to the original specs
+
+| # | Was | Is |
+|---|---|---|
+| E1 | Compiler Explorer called with `options=-O2` | `-O2` is a GCC/Clang flag; rustc rejects it. Use **`-C opt-level=2`**. The godbolt compiler ID is **pinned in config**, never "latest". |
+| E2 | Admin discussions queue via "client-side GitHub API, no auth needed" | **Impossible.** GitHub Discussions is GraphQL-only and GraphQL always requires a token. Discussions panel is **dropped**; the GitHub mobile app already notifies. Issues (`problem-report`) *do* work unauthenticated over REST at 60 req/hr/IP — that panel stays. |
+| E3 | Return-visitor rate from Cloudflare Web Analytics | CF Web Analytics is cookieless and does not report it. Replaced by **deep-lesson ratio**: pageviews on `2.1`+`2.2` ÷ pageviews on `0.1`. Measures the same thing from pageview counts alone. |
+| E4 | Arabic font shortlist included Rubik | Rubik ships **no Arabic glyphs**. Face is **IBM Plex Sans Arabic**; mono is **JetBrains Mono, ligatures off**. |
+| E5 | `Step` type in `VISUALS.md` §3.1 | Could not express frames, note text, slice windows, conflicts, or multi-line highlight. **Superseded by `PLAN.md` §5**, which is the authoritative schema. |
+
+### Contradictions resolved
+
+| # | Resolution |
+|---|---|
+| C1 | Lesson **1.4 moves to leave period 2**. `FlowDiagram` stays a period-3 component. When 1.4 lands it gets a static SVG. `MemoryStepper` is the only component on the launch critical path. |
+| C2 | **Western numerals everywhere**, stepper controls included — `الخطوة 3 / 7`, never `٣ / ٧`. |
+| C3 | The rule is **"no framework, no hydration, no component JavaScript on prose pages"** — not literally zero bytes. Three exceptions are allowed and budgeted: the inline anti-FOUC theme script, the Cloudflare Analytics beacon, and a lazily-mounted Giscus. A **per-page byte budget is asserted in the build; exceeding it fails the build.** |
+| C4 | **Single public repo** (`maarefa`), Discussions enabled, Giscus on the same repo. |
+| C5 | Progress is a **static, build-time position indicator** ("lesson 4 of 9"). No localStorage, no read tracking. |
+| C6 | Launch is **link-out only** to play.rust-lang.org. Inline execution is period 2. |
+| — | **`/playground` is removed from the IA.** It would be a thin page, and lessons link to the Playground where the code actually is. Thin pages damage the domain. |
+
+### Launch scope
+
+**9 lessons, all written from scratch.** Modules 0 (0.1–0.4), 1 (1.1–1.3), 2 (2.1–2.2).
+
+Earlier drafts of 1.1–1.3 exist as personal PDF study notes structured around someone else's video course. **They are not a source for this site and nothing carries over from them.** The curriculum in `docs/CURRICULUM.md` is the sole structural authority — its ordering is deliberate and diverges from typical course ordering (ownership arrives in module 2, much earlier than most).
 
 ---
 
@@ -61,13 +105,13 @@ Admin gate     Cloudflare Access
 Compiler Explorer's iframe is a full IDE with draggable panes — unusable at 380px, and this site is mobile-first. Instead, call the REST API during the build, render a custom responsive view, and cache the result.
 
 ```
-POST https://godbolt.org/api/compiler/<id>/compile
-Body: source · Query: options,filters · Header: Accept: application/json
+POST https://godbolt.org/api/compiler/<pinned-id>/compile
+Body: source · Query: options=-C opt-level=2, filters · Header: Accept: application/json
 ```
 
 The response's `asm[].source.line` gives source-line ↔ assembly-line mapping, which is what makes the custom side-by-side view possible.
 
-**Caching is mandatory.** Hash the code block, store the result under `cache/asm/`, commit it. Compiler Explorer is a donation-funded free service handling millions of compilations weekly — never re-fetch what is already cached, and never call it at runtime.
+**Caching is mandatory.** Hash the code block, store the result under `cache/asm/`, commit it. Compiler Explorer is a donation-funded free service handling millions of compilations weekly — never re-fetch what is already cached, and never call it at runtime. Short links are generated once at build and committed too, never regenerated.
 
 ### Four components, not twenty-three visuals
 
@@ -80,13 +124,13 @@ The expensive mistake would be hand-building each visual. Build four components;
 | `FlowDiagram` | match, Option, Result, control flow |
 | static SVG | everything that doesn't change state |
 
-`MemoryStepper` is the critical piece. Get its data format right and every later memory visual is a data file, not a build task. **Read `docs/VISUALS.md` before touching it.**
+`MemoryStepper` is the critical piece. **Its schema is fixed against all seven planned visuals before any component code is written** — a schema change discovered at lesson 2.4 would force a rewrite of everything authored before it, possibly during a period with no laptop. Schema lives in `PLAN.md` §5. **Read `docs/VISUALS.md` before touching it.**
 
 ---
 
 ## RTL — the detail that breaks Arabic technical sites
 
-`dir="rtl"` on `<html>`, **but**:
+`dir="rtl"` on `<html lang="ar">`, **but**:
 
 - **Every code block, terminal output, file path, and error message must be `dir="ltr"`.** Without this, bidirectional reordering mangles code and makes error messages unreadable.
 - Inline code inside Arabic prose: `dir="ltr"; unicode-bidi: isolate`
@@ -94,7 +138,7 @@ The expensive mistake would be hand-building each visual. Build four components;
 - Western numerals (0-9) throughout — standard in Egyptian technical writing
 - The `MemoryStepper` mixes directions inside one component: code and memory panels LTR, explanation and controls RTL. **Test this explicitly at 380px.**
 
-Every page must be checked with mixed Arabic prose and English identifiers before it ships.
+The **Playwright 380px mixed-direction check is part of the definition of done**, not optional tooling. It is the one failure mode that cannot be caught from a phone and the one most likely to regress silently.
 
 ---
 
@@ -102,19 +146,21 @@ Every page must be checked with mixed Arabic prose and English identifiers befor
 
 - **Arabic** for all learner-facing copy, Egyptian register, teaching voice — explain *why*, not just the rule
 - **English** for code, identifiers, error messages, comments, commit messages, and file names. Never translate identifiers or error text.
-- Slugs: Latin transliteration, stable, **never regenerated once published** — they get indexed
-- **Zero JavaScript on prose-only pages.** Components are per-page islands.
+- Slugs: Latin transliteration, **unnumbered**, stable, **never regenerated once published** — they get indexed. Ordering lives in frontmatter; directories on disk stay numbered for authoring convenience. The curriculum has already renumbered once and will again — numbers must never reach a URL.
+- **No framework, no hydration, no component JavaScript on prose pages.** Components are per-page islands. Byte budget enforced at build.
 - Syntax highlighting at build time (Shiki) — no highlighter shipped to the client
 - No animation libraries. CSS transitions on SVG attributes are sufficient.
 - All colours as CSS variables so dark mode and print are free
 - `prefers-reduced-motion` disables transitions without disabling functionality
+- Commit after every completed task
 
 ---
 
 ## Repository layout
 
 ```
-docs/                         specifications — read, don't edit
+docs/                         specifications — correct them when they are wrong, don't drift
+PLAN.md                       implementation plan; MemoryStepper schema is authoritative here
 content/
   rust/<module>/<lesson>.mdx
   rust/<module>/<lesson>.steps.ts    visual data, co-located
@@ -124,7 +170,7 @@ components/
   visuals/                    the four components
   lesson/                     lesson page parts
 app/                          Next.js routes
-scripts/                      build-time: asm fetch, sitemap, link check
+scripts/                      build-time: asm fetch, sitemap, link check, budget check
 ```
 
 `cache/` and `content/` are committed. Git history is the audit trail.
@@ -133,9 +179,9 @@ scripts/                      build-time: asm fetch, sitemap, link check
 
 ## Out of scope — do not build unprompted
 
-CUDA track · paid product or paywall · user accounts · progress sync · notifications · comparison tools · a custom analytics dashboard · inline code execution (launch uses link-out only) · English translations
+CUDA track · paid product or paywall · user accounts · progress sync or read tracking · notifications · comparison tools · a custom analytics dashboard · inline code execution (launch uses link-out only) · English translations · site search · PWA/offline · `/playground` · per-lesson OG images (period 2)
 
-Each is planned for a later phase. Adding any now delays the critical path.
+Each is planned for a later phase, or deliberately dropped. Adding any now delays the critical path.
 
 ---
 
@@ -143,10 +189,13 @@ Each is planned for a later phase. Adding any now delays the critical path.
 
 - [ ] Follows the seven-part template (see `docs/CURRICULUM.md` §4)
 - [ ] Every code sample compiles — verified, not assumed
-- [ ] Every quoted error message is verbatim from a real compiler run
+- [ ] Every quoted error message is verbatim from a real compiler run, with its rustc version shown
 - [ ] Visual present where the curriculum specifies one
-- [ ] Renders correctly at 380px with mixed Arabic/English
-- [ ] Code blocks are `dir="ltr"`
+- [ ] **Playwright 380px mixed-direction check passes**
+- [ ] Code blocks are `dir="ltr"`; no ligatures
+- [ ] Western numerals throughout
 - [ ] Links to relevant `/problems` entries
 - [ ] Prev/next navigation correct
-- [ ] Zero console errors, zero JS if the lesson has no visual
+- [ ] Internal link check passes (broken internal link fails the build)
+- [ ] Per-page JS byte budget passes
+- [ ] Zero console errors, no component JS if the lesson has no visual

@@ -1,4 +1,4 @@
-# Fikra — Visual System Specification
+# Maarefa — Visual System Specification
 
 The visuals are the product. Everything else on the site exists elsewhere in some form; the memory visualisations do not exist in Arabic at all.
 
@@ -88,41 +88,27 @@ Covers module 2 entirely, plus `Vec` growth and struct layout. **This one compon
 ├────────────────────────┴─────────────────────────┤
 │  الشرح للخطوة الحالية (RTL)                       │
 ├──────────────────────────────────────────────────┤
-│  [◀ السابق]      الخطوة ٣ / ٧      [التالي ▶]     │
+│  [◀ السابق]      الخطوة 3 / 7      [التالي ▶]     │
 └──────────────────────────────────────────────────┘
 ```
 
 **Layout (mobile, ≤ 640px):** panels stack vertically — code, then memory, then explanation, then controls. Controls are fixed at the bottom of the component with ≥ 44px touch targets. **Test this at 380px before considering the component done.**
 
-**Data format:**
+**Data format: see `PLAN.md` §5, which is authoritative.**
 
-```ts
-type Step = {
-  codeLine: number;              // 1-indexed, highlighted
-  explanation: string;           // Arabic, 1–3 sentences
-  stack: StackSlot[];
-  heap: HeapBlock[];
-  note?: 'error' | 'insight';    // renders a callout
-};
+The draft types that used to sit here are superseded. They could not express five things the visuals in §4 require:
 
-type StackSlot = {
-  id: string;
-  name: string;                  // 's1'
-  frame: string;                 // 'main'
-  fields?: { label: string; value: string }[];  // ptr/len/cap
-  pointsTo?: string;             // heap block id
-  state: 'owned' | 'borrowed' | 'borrowed_mut'
-       | 'moved' | 'dropped' | 'uninitialised';
-  borrows?: { from: string; kind: 'shared' | 'mut' }[];
-};
+| Gap | Needed by |
+|---|---|
+| Frame identity and ordering — a frame with no slots was invisible, and step 1 of 2.2 is *"empty `main` frame"* | 2.2, 2.3 |
+| Note **text** — `note: 'error' \| 'insight'` carried a kind but no content, and step 6 of 2.2 must print a verbatim compiler error | 2.2, 2.4 |
+| Slice windows — a bracket spanning a sub-range of an existing heap block | 2.5 |
+| Conflict markers — the illegal `&mut` + `&` pair rendered in red | 2.4 |
+| Multi-line highlight — steps 2 and 3 of 2.2 both sit on source line 2 | 2.2, 5.1 |
 
-type HeapBlock = {
-  id: string;
-  cells: string[];               // ['h','e','l','l','o']
-  capacity?: number;             // shows unused capacity slots
-  state: 'alive' | 'freed';
-};
-```
+Borrow direction was also ambiguous (`borrows: { from }` — borrower or owner?). The replacement schema names it explicitly.
+
+**The schema is fixed against all seven planned memory visuals — 2.1, 2.2, 2.3, 2.4, 2.5, 5.1, 3.1 — before any component code is written.** The economics of this site depend on later visuals being data files rather than build tasks; a schema change discovered at 2.4 costs a rewrite of everything authored before it, during a period that may have no laptop.
 
 Authoring a new visual = writing an array of `Step`. No new code.
 
@@ -174,8 +160,8 @@ Everything else — project tree diagrams, trait/impl maps, integer range charts
 ### 1.3 — الدوال: expression vs statement
 **Static SVG.** Two code fragments, one with a trailing semicolon and one without, with the return value traced out of each. The semicolon is highlighted as the operative difference.
 
-### 1.4 — التحكم في المسار
-**`FlowDiagram`.** `if` as an expression producing a value; `loop` with `break` carrying a value out.
+### 1.4 — التحكم في المسار *(deferred to leave period 2)*
+**Static SVG when the lesson lands; `FlowDiagram` in period 3.** `if` as an expression producing a value; `loop` with `break` carrying a value out. The lesson was pulled from launch because its specified component is a period-3 build, and a second component on the launch critical path is the fastest way to lose the launch window.
 
 ### 2.1 — الستاك والهيب ⭐
 **`MemoryStepper`, ~6 steps.**
@@ -201,9 +187,9 @@ fn main() {
 |---|---|---|---|
 | 1 | 1 | empty `main` frame | البرنامج بدأ |
 | 2 | 2 | `s1` slot {ptr,len,cap} + heap "hello" + pointer | إيه اللي حصل فعلاً في الذاكرة |
-| 3 | 2 | same, insight callout | `String` = ٣ كلمات على الستاك + بيانات على الهيب |
+| 3 | 2 | same, insight callout | `String` = 3 كلمات على الستاك + بيانات على الهيب |
 | 4 | 3 | `s2` slot appears, copies 3 fields, points to same heap block; `s1` → `moved` | **النقل حصل هنا** |
-| 5 | 3 | same, insight callout | ما حصلش نسخ للهيب — ٢٤ بايت بس اتنسخوا |
+| 5 | 3 | same, insight callout | ما حصلش نسخ للهيب — 24 بايت بس اتنسخوا |
 | 6 | 3 | same, error callout showing the real compiler message | لو جربت تستخدم `s1` دلوقتي |
 | 7 | 4 | `s2` dropped, heap block freed, all fading | نهاية الـscope |
 
@@ -261,8 +247,10 @@ Step 6 is the one that makes the lesson land: showing the actual `borrow of move
 ```css
 --mem-owned, --mem-borrowed, --mem-borrowed-mut,
 --mem-moved, --mem-freed, --mem-stack-bg, --mem-heap-bg,
---mem-pointer, --mem-error
+--mem-static-bg, --mem-pointer, --mem-error
 ```
+
+**Values live in `PLAN.md` §6, with measured contrast ratios for both themes.** Every state border clears WCAG 1.4.11 (3:1) against its panel background in light and dark. Note that the state colours are deliberately close in *luminance* — 1.01:1 between `borrowed` and `error` in dark — so colour alone never identifies a state. That is why each state also carries a distinct border style, opacity and fill pattern, enumerated in `PLAN.md` §6.
 
 **Bundle discipline:** components are per-page islands. A lesson with no stepper ships no stepper code. Prose-only lessons ship zero JavaScript.
 
@@ -294,8 +282,8 @@ content/rust/02-ownership/02-move.steps.ts
 
 **Leave period 1:** `MemoryStepper` + visuals for 2.1 and 2.2, plus static SVGs for 0.4, 1.1, 1.2, 1.3.
 
-Getting `MemoryStepper` right is the whole job. Once it exists and its data format is proven against two real lessons, every subsequent memory visual is a data file.
+Getting `MemoryStepper` right is the whole job. Once it exists and its data format is proven against two real lessons, every subsequent memory visual is a data file. It is the **only** component on the launch critical path — deliberately.
 
-**Leave period 2:** visuals for 2.3, 2.4, 2.5 — all data-only, no new components.
+**Leave period 2:** visuals for 2.3, 2.4, 2.5 — all data-only, no new components. Plus the static SVG for 1.4.
 
-**Leave period 3:** `FlowDiagram` and `LifetimeTimeline`.
+**Leave period 3:** `FlowDiagram` (and 1.4 upgraded to it) and `LifetimeTimeline`.

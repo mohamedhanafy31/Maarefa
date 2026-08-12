@@ -1,17 +1,19 @@
-# Fikra — Curriculum & Brand (v3)
+# Maarefa — Curriculum & Brand (v4)
 
-**Fikra** · Arabic Technical Knowledge
+**Maarefa** (معرفة) · Arabic Technical Knowledge
 *Learn what happens beneath the code.*
 
-Supersedes the curriculum section of the earlier spec. Architecture, admin page, and analytics sections of `SITE_SPEC_V2.md` remain valid. Visual specifications live in `VISUALS.md`.
+Supersedes the curriculum section of the earlier spec. Architecture, admin page, and analytics sections of `SITE_SPEC.md` remain valid. Visual specifications live in `VISUALS.md`.
+
+**v4 changes:** renamed from Fikra to Maarefa · 1.1–1.3 are new writing, not adaptations · lesson 1.4 moved to leave period 2 · launch scope is 9 lessons.
 
 ---
 
 ## 1. Brand
 
-The name is broad and the tagline is sharp — a good pairing. "Fikra" doesn't box the site into Rust, which matters when CUDA and other tracks arrive. **"Learn what happens beneath the code"** does the positioning work: it promises mechanism, not syntax, and that promise is exactly what the visual and assembly layers deliver.
+The name is broad and the tagline is sharp — a good pairing. "Maarefa" (معرفة — knowledge) doesn't box the site into Rust, which matters when CUDA and other tracks arrive. **"Learn what happens beneath the code"** does the positioning work: it promises mechanism, not syntax, and that promise is exactly what the visual and assembly layers deliver.
 
-**Before committing:** check domain availability and search for existing Arabic tech brands using the name — "Fikra" is a common word and has been used by regional startups. The tagline is distinctive enough that a slightly modified domain (e.g. adding a suffix) would still work if the exact match is taken.
+The name is settled. The repo is `maarefa`. Domain is tracked separately; every reference in the codebase goes through a single `SITE_URL` constant so nothing else depends on it.
 
 **Voice:** Egyptian Arabic, teaching rather than restating documentation. Explain *why* the language works this way, not only what the rule is. English for identifiers, code, and error messages — never translate them.
 
@@ -46,12 +48,14 @@ Three of the five launch problem pages are referenced directly from this module.
 
 | # | Lesson | Teaches | Visual | Code |
 |---|---|---|---|---|
-| 1.1 ✅ | المتغيرات والقابلية للتغيير | `let`, `mut`, shadowing, `const` | shadowing vs mutation, two panels | runnable |
-| 1.2 ✅ | أنواع البيانات | scalars, tuples, arrays, overflow behaviour | integer ranges to scale | runnable |
-| 1.3 ✅ | الدوال | parameters, returns, **expression vs statement** | semicolon traced as the difference | runnable |
-| 1.4 🔨 | التحكم في المسار | `if` as expression, `loop`/`while`/`for`, `break` with value | `FlowDiagram` | runnable |
+| 1.1 🔨 | المتغيرات والقابلية للتغيير | `let`, `mut`, shadowing, `const` | shadowing vs mutation, two panels | runnable |
+| 1.2 🔨 | أنواع البيانات | scalars, tuples, arrays, overflow behaviour | integer ranges to scale | runnable |
+| 1.3 🔨 | الدوال | parameters, returns, **expression vs statement** | semicolon traced as the difference | runnable |
+| 1.4 ⬜ | التحكم في المسار | `if` as expression, `loop`/`while`/`for`, `break` with value | static SVG at launch of period 2; `FlowDiagram` in period 3 | runnable |
 
-Existing lesson drafts need adjusting: Cargo material moves to 0.4, and each lesson gains a "what you'll understand" opener and an exercise.
+**All of 1.1–1.3 are written from scratch.** Earlier PDF drafts are personal study notes structured around someone else's video course; they are deliberately not a source and nothing carries over from them. This curriculum's own pedagogy is the sole structural authority — the ordering here diverges from typical course ordering on purpose, most visibly in placing ownership at module 2.
+
+**1.4 moved to leave period 2.** Its specified visual was `FlowDiagram`, a component not scheduled until period 3, which would have put a second component on the launch critical path. Control flow is not a prerequisite for ownership, so the launch arc "nothing installed → ownership" survives intact. If `MemoryStepper` lands early, 1.4 is the first thing to add back.
 
 ---
 
@@ -104,19 +108,21 @@ Existing lesson drafts need adjusting: Cargo material moves to 0.4, and each les
 
 ## 3. Launch scope (leave period 1)
 
-**10 lessons:**
+**9 lessons:**
 
 ```
 Module 0   0.1  0.2  0.3  0.4        ← all new, all setup
-Module 1   1.1  1.2  1.3  1.4        ← three exist, one new
+Module 1   1.1  1.2  1.3             ← all new; 1.4 deferred to period 2
 Module 2   2.1  2.2                  ← both new, both flagship visuals
 ```
 
 **Build effort:**
-- 7 lessons written from scratch, 3 adapted
+- 9 lessons written from scratch — none adapted
 - 1 component (`MemoryStepper`) + 2 stepper visuals
-- 4 static SVGs
+- 4 static SVGs (0.4, 1.1, 1.2, 1.3)
 - 5 problem pages (all already solved)
+
+Launch succeeds on exactly two things: **the site is live on the real domain, and mixed-direction rendering is correct at 380px.** Everything else can slip a task. If something has to give, give up polish and keep the deploy.
 
 This is a complete arc: a learner arriving with nothing installed can reach a working understanding of ownership — the concept that decides whether someone continues with Rust or abandons it. **That is a genuinely useful destination**, not a partial course.
 
@@ -160,11 +166,17 @@ Verbatim error strings are the SEO asset — people paste error text into search
 
 | Question | Decision |
 |---|---|
-| Name | **Fikra** — Arabic Technical Knowledge |
+| Name | **Maarefa** (معرفة) — Arabic Technical Knowledge |
 | Tagline | Learn what happens beneath the code. |
-| Repo | Public, Discussions enabled, Giscus on the same repo |
+| Repo | `maarefa`. **Single** public repo, Discussions enabled, Giscus on the same repo |
 | Lesson order | Independent pedagogical order (ownership early), not video-series order |
 | Starting point | From installation — Module 0 |
 | Author identity | Real name and background on About page |
 | Exercises | Included from launch (part of the lesson template) |
+| Launch scope | 9 lessons, all new writing; 1.4 in period 2 |
+| Slugs | Latin transliteration, **unnumbered**; order lives in frontmatter |
+| Numerals | Western 0-9 everywhere, stepper controls included |
+| Code execution | Link-out to play.rust-lang.org only at launch; inline in period 2 |
+| Progress display | Static build-time position indicator; no tracking |
 | CUDA | Deferred |
+| `/playground` | **Dropped** — thin page, and lessons link out where the code is |

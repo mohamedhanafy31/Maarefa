@@ -1,4 +1,8 @@
-# Arabic Systems-Programming Learning Platform — Full Specification (v2)
+# Maarefa — Full Specification (v3)
+
+*Arabic systems-programming learning platform.*
+
+**v3 changes:** renamed from Fikra to Maarefa · corrected the rustc optimisation flag (§2.1) · dropped the admin Discussions panel, which was not buildable as specified (§6.2) · replaced return-visitor rate with the deep-lesson ratio (§7.1) · removed `/playground` (§3) · resolved the repo-privacy and inline-execution ambiguities.
 
 Architecture, problems library, design, admin, and analytics.
 
@@ -27,7 +31,7 @@ Content        MDX in git
 Build          Next.js static export
 Host           Cloudflare Pages (free, unlimited bandwidth, commercial use OK)
 Assembly       Compiler Explorer API, called at BUILD time, cached in git
-Run code       play.rust-lang.org (link out / inline)
+Run code       play.rust-lang.org (link out only; inline deferred to period 2)
 Community      GitHub Discussions via Giscus
 Analytics      Cloudflare Web Analytics + Google Search Console
 Admin gate     Cloudflare Access (free tier)
@@ -42,11 +46,13 @@ Compiler Explorer's iframe is a full IDE with draggable panes. On a 380px screen
 Instead, call the REST API at build time:
 
 ```
-POST https://godbolt.org/api/compiler/<compiler-id>/compile
+POST https://godbolt.org/api/compiler/<pinned-compiler-id>/compile
 Body:    source code
-Query:   options=-O2 & filters=labels,directives,comments
+Query:   options=-C opt-level=2 & filters=labels,directives,comments
 Header:  Accept: application/json
 ```
+
+**The optimisation flag is `-C opt-level=2`, not `-O2`.** `-O2` is a GCC/Clang flag; rustc rejects it. The compiler ID is pinned in config to an explicit rustc version, never "latest" — otherwise cached assembly stops being reproducible and quoted output silently drifts from what the site claims. **Every assembly panel displays the rustc version it was produced with**, and the pinned version needs periodic review.
 
 The response includes an `asm` array where each entry carries `text` and `source: {line}` — a **mapping from assembly line back to source line**. That mapping is what makes a custom side-by-side view possible: hover a Rust line, the corresponding assembly highlights.
 
@@ -68,7 +74,7 @@ The requirement — users post problems, author replies, other users can reply �
 
 GitHub Discussions via Giscus satisfies every part of the requirement while GitHub carries the operational burden: auth, spam, notifications, and **moderation from the GitHub mobile app**. The audience already has GitHub accounts.
 
-Requires a **public repo** with Discussions enabled. (Content repo can stay private; use a separate public repo purely for discussions if preferred.)
+Requires a **public repo** with Discussions enabled. **Decided: a single public repo, `maarefa`**, carrying content and discussions together. A split content/discussions pair was considered and rejected — two repos is two things to keep in sync from a phone.
 
 **Pin a notice in Arabic** stating the reply schedule. Converting "abandoned site" into "known schedule" is worth more than any feature.
 
@@ -82,7 +88,7 @@ Not every code block should be runnable. Marking everything makes the buttons no
 | `runnable` | Rust Playground link, later inline | when **output** is the lesson |
 | `showAsm` | build-time Godbolt render | when **generated code** is the lesson |
 
-**Assembly is not useful in early lessons.** For a beginner learning `let mut x = 5`, assembly is noise, and under `-O2` much of it disappears in ways that mislead. Modules 1–3 use plain and runnable blocks. Assembly appears from module 4 onward, where it proves something specific.
+**Assembly is not useful in early lessons.** For a beginner learning `let mut x = 5`, assembly is noise, and under `-C opt-level=2` much of it disappears in ways that mislead. Modules 1–3 use plain and runnable blocks. Assembly appears from module 4 onward, where it proves something specific.
 
 **No CUDA compiler at launch.** CUDA track is deferred entirely (see §11).
 
@@ -96,11 +102,12 @@ Not every code block should be runnable. Marking everything makes the buttons no
 /rust/[module]/[lesson]        lesson
 /problems                      troubleshooting index
 /problems/[slug]               one problem
-/discuss                       community board (Giscus)
-/playground                    standalone Rust playground link-out
+/discuss                       community entry point: explainer, reply-schedule notice, link out
 /about                         who wrote this, why, methodology
-/admin                         private — see §8
+/admin                         private — see §6
 ```
+
+`/playground` was specified here and has been **removed**. It would have been a thin page whose only content was a link, and lessons already link to the Playground at the point where the code actually appears. Thin pages damage the domain.
 
 ---
 
@@ -137,7 +144,7 @@ Add a submission form ("واجهتك مشكلة؟") that opens a **GitHub issue 
 ## 5. Design direction
 
 - **Dark mode default**, light toggle. Matches the audience's editor.
-- **Typography is the main lever.** One Arabic face with real weight range (IBM Plex Sans Arabic, Cairo, or Rubik); one mono face (JetBrains Mono, Fira Code). Self-hosted, subset, `font-display: swap`.
+- **Typography is the main lever.** Decided: **IBM Plex Sans Arabic** for Arabic and Latin prose, **JetBrains Mono with ligatures disabled** for code. Self-hosted WOFF2, subset, `font-display: swap`. Rubik was on the original shortlist and is disqualified — it ships no Arabic glyphs. Ligatures are off because `->` rendered as an arrow hides characters a beginner has to type.
 - **Line-height ≥ 1.8 for Arabic body text.** Arabic reads badly tight.
 - Restrained palette, one accent colour used deliberately.
 - Code blocks are the visual anchor — custom syntax theme, not a default library skin.
@@ -171,15 +178,18 @@ The admin page exists for what the external dashboards *cannot* show. It is **no
 | Problems | Published count, drafts in progress |
 | Broken links | Internal link check result from the build |
 
-### 6.2 Live queues (client-side GitHub API, public repo — no auth needed)
+### 6.2 Live queues (client-side GitHub REST, public repo — no auth)
 
 | Panel | Source |
 |---|---|
-| Unanswered discussions | GitHub Discussions with no reply |
 | Problem submissions | Open issues with the `problem-report` label |
 | Oldest unanswered | Sorted, so nothing sits forgotten |
 
-This is the panel that matters during leave: it tells you in one glance what needs a reply from your phone.
+**The unanswered-discussions panel was specified here and cannot be built as described.** GitHub Discussions is exposed only through the GraphQL API, and GraphQL requires a token unconditionally — there is no unauthenticated read path, so a static page cannot query it. Issues *are* readable unauthenticated over REST v3 (60 requests/hour/IP), so the `problem-report` queue is unaffected.
+
+It is also unnecessary: the GitHub mobile app already pushes notifications for unanswered discussions, so the panel would duplicate a working channel while adding a moving part that fails silently during leave.
+
+**Follow-on, not built now:** a scheduled GitHub Action querying GraphQL with `GITHUB_TOKEN` and committing a `discussions.json` snapshot, which triggers a Pages rebuild. Free and unattended, but a moving part — only add it if the notification channel proves insufficient in practice.
 
 ### 6.3 Traffic summary (phase 2, optional)
 
@@ -199,7 +209,7 @@ The audience is small: a few thousand Arabic-speaking developers interested in s
 |---|---|---|
 | **Search impressions** | Search Console | **Leading indicator.** Shows the queries exist at all, before any clicks. Most important in months 1–3. |
 | **Lesson-2 progression** | Analytics | Of people who read lesson 1, how many reach lesson 2? Measures whether the teaching works. |
-| **Return visitors** | Analytics | Someone coming back means the site became a resource, not a page. |
+| **Deep-lesson ratio** | Analytics | Pageviews on `2.1`+`2.2` ÷ pageviews on `0.1`. Did anyone get past the beginning? Replaces return-visitor rate, which Cloudflare Web Analytics is cookieless and does not report. Needs only pageview counts, which it does report. |
 | **Discussion posts** | GitHub | **Highest-signal single metric.** Posting takes real effort — one post outweighs a hundred pageviews. |
 
 Deliberately **not** tracked: bounce rate, time on page, session duration. At this scale they are noise.
@@ -215,7 +225,7 @@ Honest ranges for a niche Arabic technical site on a new domain:
 | 6 | 500–1500 | Working |
 | 6 | < 100 | Search isn't going to carry this — distribution must come from LinkedIn instead |
 
-Supporting signals: return-visitor rate above 20% means the content is good. Lesson-1→lesson-2 progression above 40% means the curriculum works. **Anyone reaching lesson 3 or beyond is the strongest signal available** — that person is actually learning, not bouncing.
+Supporting signals: a deep-lesson ratio above 20% means the content is good. Lesson-1→lesson-2 progression above 40% means the curriculum works — derived by hand from two pageview counts, not reported directly. **Anyone reaching lesson 3 or beyond is the strongest signal available** — that person is actually learning, not bouncing.
 
 ### 7.3 The decision point
 
@@ -262,22 +272,27 @@ Also deferred: paid product, progress tracking, cross-site search, PDF exports, 
 ## 10. Build order
 
 ### Leave period 1 — ship
+
+**Succeeds on exactly two things: the site is live on the real domain, and mixed-direction rendering is correct at 380px.** Everything below those two can slip a task without consequence. If something has to give, give up the polish and keep the deploy.
+
 - Next.js scaffold, static export, Cloudflare Pages, domain live
-- RTL + typography + dark mode, verified with mixed Arabic/English
-- Lessons 1.1–1.5, 2.1, 2.2
-- Stack/heap panel + **ownership step-through visualiser**
+- RTL + typography + dark mode, verified with mixed Arabic/English at 380px in CI
+- Nine lessons: 0.1–0.4, 1.1–1.3, 2.1, 2.2 — all new writing
+- Stack/heap panel + **ownership step-through visualiser** (`MemoryStepper`)
 - Runnable blocks via Playground link-out (tier 1 only)
 - Five problem pages
 - Giscus + pinned expectations notice
 - Admin page §6.1 and §6.2
-- `sitemap.xml`, `robots.txt`, Search Console verified
+- `sitemap.xml`, `robots.txt`, RSS, 404, Search Console verified
 - One LinkedIn announcement post
 
 ### Leave period 2 — depth
+- Lesson 1.4 (deferred from launch) with its static SVG
 - Module 2 completed (2.3–2.5) with visuals
 - Five more problem pages
 - Inline playground execution (tier 2), with clean fallback
 - First `showAsm` lesson end-to-end, to validate the build-time pipeline
+- Per-lesson OG cards
 
 ### Leave period 3 — modules 3 and 4, then review at month 6
 
