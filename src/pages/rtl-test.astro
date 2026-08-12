@@ -1,0 +1,127 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../lib/site.ts';
+
+// Permanent fixture, not a throwaway. Every RTL/LTR failure mode this site can
+// have is on this one page, so a regression shows up here first. Playwright
+// screenshots it at 380 / 768 / 1440.
+//
+// noindex: it is a test surface, not content.
+
+// Captured from a real run — rustc 1.97.1 (8bab26f4f 2026-07-14).
+// Never retype compiler output from memory; CLAUDE.md forbids it.
+const realError = `error[E0382]: borrow of moved value: \`s1\`
+ --> move.rs:4:20
+  |
+2 |     let s1 = String::from("hello");
+  |         -- move occurs because \`s1\` has type \`String\`, which does not implement the \`Copy\` trait
+3 |     let s2 = s1;
+  |              -- value moved here
+4 |     println!("{}", s1);
+  |                    ^^ value borrowed here after move
+  |
+help: consider cloning the value if the performance cost is acceptable
+  |
+3 |     let s2 = s1.clone();
+  |                ++++++++`;
+
+const pangram = 'نص حكيم له سر قاطع وذو شأن عظيم مكتوب على ثوب أخضر ومغلف بجلد أزرق';
+---
+
+<Base title="اختبار الاتجاهات" noindex={true}>
+  <main class="wrap" id="main">
+    <h1>اختبار الاتجاهات — RTL / LTR</h1>
+
+    <p>
+      الصفحة دي مش محتوى. دي أداة اختبار دائمة: كل طريقة ممكن التخطيط يتكسر بيها
+      موجودة هنا، عشان أي تراجع يظهر في المكان ده الأول.
+    </p>
+
+    <h2>1. تشكيل الحروف العربية</h2>
+    <p>
+      لازم الحروف تكون متصلة. لو الـ subset كسر جداول الـ GSUB، هتشوف الحروف
+      منفصلة عن بعضها — وده بيحصل جزئياً، يعني النظرة السريعة ممكن تعديه.
+    </p>
+
+    <p style="font-weight: 400">{pangram}</p>
+    <p style="font-weight: 500">{pangram}</p>
+    <p style="font-weight: 600">{pangram}</p>
+
+    <p>حروف متكررة لفحص المواضع الثلاثة: ببب — ععع — سسس — مممم — هههه</p>
+    <p>حروف لا تتصل من اليسار: ددد — ررر — ااا — ووو — ززز</p>
+    <p>تشكيل وعلامات: مَرْحَبًا بِكُمْ — أُمّ — إِنَّ — ضَغْطٌ</p>
+
+    <h2>2. أرقام غربية داخل نص عربي</h2>
+    <p>
+      الدرس ده رقم 3 من أصل 9، وبياخد حوالي 12 دقيقة. حجم الـ <code>String</code>
+      على الستاك 24 بايت، و<code>i32</code> بياخد 4 بايت بالظبط.
+    </p>
+
+    <h2>3. كود إنجليزي داخل جملة عربية</h2>
+    <p>
+      لما تكتب <code>let mut x = 5;</code> إنت بتقول للكومبايلر إن <code>x</code>
+      ممكن تتغير. من غير <code>mut</code> القيمة تبقى ثابتة، والنوع هنا هو
+      <code>i32</code> بشكل افتراضي. جرب <code>cargo build --release</code> وشوف
+      الفرق.
+    </p>
+    <p>
+      علامات ترقيم على الحدود — ده أصعب اختبار: النقطة بعد <code>Vec&lt;T&gt;</code>.
+      والفاصلة بعد <code>Option&lt;&amp;str&gt;</code>، والقوس (<code>HashMap</code>)
+      جوه قوسين.
+    </p>
+
+    <h2>4. مسارات ملفات</h2>
+    <p>الملف التنفيذي بيتحط في <code>target/debug/hello</code> — ومن غير امتداد على لينكس.</p>
+    <p>وملف الإعدادات هو <code>~/.cargo/config.toml</code> في مجلد البيت.</p>
+
+    <h2>5. بلوك كود</h2>
+    <pre dir="ltr"><code>{`fn main() {
+    let s1 = String::from("hello");
+    let s2 = s1;
+    println!("{}", s2);
+}
+
+// Ligature check — these must render as the characters you type:
+//   ->   =>   !=   ==   >=   <=   ::   |>   ...   www
+fn add(a: i32, b: i32) -> i32 { a + b }`}</code></pre>
+
+    <h2>6. رسالة خطأ حقيقية</h2>
+    <p>
+      من تشغيل فعلي للكومبايلر، نسخة rustc {SITE.rustcVersion}. النص ده لازم
+      يفضل مقروء بالظبط زي ما هو — الناس بتلزق الرسالة دي في البحث.
+    </p>
+    <pre dir="ltr"><code>{realError}</code></pre>
+
+    <h2>7. مخرجات طرفية</h2>
+    <pre dir="ltr"><code>{`$ cargo build
+   Compiling hello v0.1.0 (/home/user/hello)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.42s
+$ ls -la target/debug/hello
+-rwxrwxr-x 2 user user 3823192 Aug 12 11:04 target/debug/hello`}</code></pre>
+
+    <h2>8. جدول</h2>
+    <table>
+      <thead>
+        <tr><th>الحالة</th><th>الشكل</th><th>المعنى</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>owned</code></td><td>حدّ سميك</td><td>الـ binding بيملك القيمة</td></tr>
+        <tr><td><code>moved</code></td><td>حدّ متقطع</td><td>القيمة اتنقلت، والـ binding بقى غير صالح</td></tr>
+        <tr><td><code>borrowed</code></td><td>سهم متقطع</td><td>استعارة عادية</td></tr>
+      </tbody>
+    </table>
+
+    <h2>9. قائمة</h2>
+    <ol>
+      <li>ثبّت <code>rustup</code> من الموقع الرسمي</li>
+      <li>اتأكد بـ <code>rustc --version</code></li>
+      <li>افتح المشروع بـ <code>code .</code> من الترمنال</li>
+    </ol>
+
+    <h2>10. تمرين قابل للطي</h2>
+    <details>
+      <summary>شوف الحل</summary>
+      <p>ضيف <code>mut</code> قبل اسم المتغير كده: <code>let mut x = 5;</code></p>
+    </details>
+  </main>
+</Base>

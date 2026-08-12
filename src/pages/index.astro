@@ -1,0 +1,41 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../lib/site.ts';
+---
+
+<Base title={SITE.name}>
+  <main class="wrap" id="main">
+    <h1>{SITE.name}</h1>
+    <p class="tagline">{SITE.tagline}</p>
+
+    <p>
+      معظم المحتوى العربي عن البرمجة بيشرح <em>إيه</em> القاعدة. الموقع ده بيشرح
+      <em>ليه</em> — إيه اللي بيحصل في الذاكرة فعلاً، وإيه الكود اللي الكومبايلر
+      بيطلعه، وليه رسالة الخطأ دي بالذات ظهرت لك.
+    </p>
+
+    <p>
+      البداية مسار Rust، من الصفر — من غير أي حاجة متثبتة — لحد ما تفهم الـ
+      <code>ownership</code>، وهي النقطة اللي بيقرر عندها معظم الناس يكملوا أو
+      يسيبوا.
+    </p>
+
+    <p class="soon">الموقع تحت الإنشاء. الدروس في الطريق.</p>
+  </main>
+</Base>
+
+<style>
+  .tagline {
+    font-size: var(--fs-lg);
+    color: var(--text-muted);
+    margin-block-start: calc(var(--sp-3) * -1);
+  }
+  .soon {
+    margin-block-start: var(--sp-7);
+    padding: var(--sp-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-ui);
+    color: var(--text-muted);
+  }
+</style>

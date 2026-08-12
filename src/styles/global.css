@@ -1,0 +1,189 @@
+/* Global base. Logical properties only — `margin-left` must never appear in
+ * this codebase. CI greps for it (scripts/check-logical-props.mjs).
+ */
+
+@import './tokens.css';
+
+/* ── fonts ─────────────────────────────────────────────────────────
+ * Subset with scripts/subset-fonts.sh, verified with scripts/verify-fonts.py.
+ * Do not regenerate these without re-running the verifier: a subset that drops
+ * the Arabic joining lookups renders disconnected letters and fails partially,
+ * so it passes a casual look.
+ */
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  src: url('/fonts/plex-arabic-400.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  src: url('/fonts/plex-arabic-500.woff2') format('woff2');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  src: url('/fonts/plex-arabic-600.woff2') format('woff2');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono-400.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono-700.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+
+/* ── reset ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-body);
+  /* Western numerals throughout — standard in Egyptian technical writing.
+   * font-feature-settings must not enable any Arabic-Indic digit form. */
+  font-variant-numeric: lining-nums;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  line-height: var(--lh-head);
+  font-weight: 600;
+  margin-block: var(--sp-6) var(--sp-3);
+  text-wrap: balance;
+}
+h1 { font-size: var(--fs-3xl); }
+h2 { font-size: var(--fs-2xl); }
+h3 { font-size: var(--fs-xl); }
+
+p, ul, ol { margin-block: 0 var(--sp-4); }
+p { max-inline-size: var(--measure); }
+
+a { color: var(--accent); text-underline-offset: 0.2em; }
+a:focus-visible, button:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+hr { border: 0; border-block-start: 1px solid var(--border); margin-block: var(--sp-6); }
+
+/* ── the RTL/LTR boundary ──────────────────────────────────────────
+ * This is the detail that breaks Arabic technical sites. Every code
+ * surface is LTR and isolated, so bidi reordering can never mangle it.
+ */
+code, pre, kbd, samp, .ltr {
+  font-family: var(--font-mono);
+  /* Belt and braces with the subset: the mono face has calt/liga/dlig/clig
+   * removed, and this stops any fallback face substituting glyphs. `->` must
+   * render as a hyphen and a greater-than sign — a beginner cannot type a
+   * ligature they have never seen. */
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0, 'dlig' 0, 'clig' 0;
+}
+
+/* Inline code inside Arabic prose. `unicode-bidi: isolate` is what stops a
+ * trailing bracket or dot from jumping to the wrong side of the run. */
+:where(p, li, td, th, summary) > code {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-size: 0.9em;
+  padding-inline: 0.35em;
+  padding-block: 0.1em;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+/* Block code, terminal output, file paths, error text. */
+pre {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: left;
+  font-size: var(--fs-code);
+  line-height: var(--lh-code);
+  margin-block: var(--sp-4);
+  padding: var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-ui);
+  /* Wide output scrolls inside its own box; the page never scrolls sideways. */
+  overflow-x: auto;
+  max-inline-size: 100%;
+}
+pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  white-space: pre;
+}
+
+/* ── tables ────────────────────────────────────────────────────── */
+table {
+  border-collapse: collapse;
+  inline-size: 100%;
+  margin-block: var(--sp-4);
+  font-size: var(--fs-sm);
+  display: block;
+  overflow-x: auto;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: var(--sp-2) var(--sp-3);
+  text-align: start;
+}
+th { background: var(--surface); font-weight: 600; }
+
+/* ── headings anchors ──────────────────────────────────────────── */
+.heading-anchor {
+  margin-inline-start: var(--sp-2);
+  color: var(--text-muted);
+  text-decoration: none;
+  opacity: 0;
+  font-weight: 400;
+}
+h2:hover .heading-anchor,
+h3:hover .heading-anchor,
+.heading-anchor:focus-visible { opacity: 1; }
+
+/* ── layout ────────────────────────────────────────────────────── */
+.wrap {
+  max-inline-size: 46rem;
+  margin-inline: auto;
+  padding-inline: var(--sp-4);
+  padding-block: var(--sp-6);
+}
+
+.skip-link {
+  position: absolute;
+  inset-block-start: -100%;
+  inset-inline-start: var(--sp-4);
+  background: var(--surface);
+  color: var(--text);
+  padding: var(--sp-3);
+  border-radius: var(--radius-ui);
+  z-index: 10;
+}
+.skip-link:focus { inset-block-start: var(--sp-3); }
+
+@media print {
+  :root { --bg: #fff; --text: #000; --surface: #fff; --border: #999; }
+  body { font-size: 11pt; }
+  .skip-link, .heading-anchor { display: none; }
+  pre { break-inside: avoid; }
+}

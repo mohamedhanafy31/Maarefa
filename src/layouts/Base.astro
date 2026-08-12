@@ -1,0 +1,64 @@
+---
+import '../styles/global.css';
+import { SITE, SITE_URL, isPreviewHost } from '../lib/site.ts';
+
+interface Props {
+  title: string;
+  description?: string;
+  /** Draft lessons and internal fixtures set this. */
+  noindex?: boolean;
+}
+
+const { title, description = SITE.description, noindex = false } = Astro.props;
+
+// While on pages.dev nothing is indexable. The _headers file sets X-Robots-Tag
+// as well — belt and braces, because a per-page tag is the kind of thing that
+// gets forgotten on one route. Both derive from SITE_URL.
+const blockIndex = isPreviewHost || noindex;
+
+const canonical = new URL(Astro.url.pathname, SITE_URL).href;
+const fullTitle = title === SITE.name ? `${SITE.name} — ${SITE.tagline}` : `${title} — ${SITE.name}`;
+---
+
+<html lang={SITE.lang} dir={SITE.dir}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {blockIndex && <meta name="robots" content="noindex,nofollow" />}
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:locale" content="ar_EG" />
+    <meta property="og:image" content={new URL('/og-default.png', SITE_URL).href} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Preload only the two faces above the fold. The 500/600 weights and the
+         bold mono load on demand; preloading all five would delay first paint
+         for weights most pages never use. -->
+    <link rel="preload" href="/fonts/plex-arabic-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin />
+
+    <!-- The one script on a prose page. Inline and blocking on purpose: a
+         deferred theme script paints the wrong theme first, and the flash is
+         worse than ~200 bytes. Reads storage, falls back to the OS preference.
+         Prose pages ship no other JavaScript — see PLAN.md §7. -->
+    <script is:inline>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+          if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">تخطَّ إلى المحتوى</a>
+    <slot />
+  </body>
+</html>
