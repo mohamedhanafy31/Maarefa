@@ -767,7 +767,20 @@ One constant in `lib/site.ts`, consumed by canonicals, `sitemap.xml`, `rss.xml`,
 
 ## 8. Task breakdown
 
-> **`docs/PROMPTS.md` was not present when this was written.** The grouping below is inferred from the two things stated directly — that this is Prompt 0, and that Prompt 1 succeeds on exactly the deploy and the 380px render — plus the leave-period order in `SITE_SPEC.md` §10. **Reconcile against the real `PROMPTS.md` before starting P1.**
+`docs/PROMPTS.md` arrived after this section was written and has been reconciled into it. Per ruling: **this section owns grouping, dependencies and the cut order; `PROMPTS.md` owns the acceptance criteria.** The phases below are unchanged — they are more granular than the prompts and do not map 1:1.
+
+| `PROMPTS.md` | `PLAN.md` §8 phases |
+|---|---|
+| Prompt 0 — Understand and plan | P0 |
+| Prompt 1 — Foundation and first deploy | **P1** |
+| Prompt 2 — Content pipeline and Module 0 | **P2** + the module-0 slice of P4 |
+| Prompt 3 — `MemoryStepper` and flagship lessons | **P3** + the 2.1/2.2 slice of P4 |
+| Prompt 4 — Module 1 and problems library | remainder of **P4** |
+| Prompt 5 — Community, admin, launch readiness | **P5** + **P6** |
+
+**Operational rule from `PROMPTS.md`: after each prompt — review, commit, deploy. Never run two prompts without deploying in between.**
+
+Requirements `PROMPTS.md` added that were not in this plan, now folded into the phases below: Lighthouse ≥ 95 mobile as a hard gate · verification at **380px, 768px and 1440px**, not 380px alone · a dedicated RTL test page as a permanent fixture · a named `<InlineCode>` component · the throwaway-third-visual test at P3 · Schema.org `Course`/`TechArticle`/`FAQPage` · breadcrumbs.
 
 Critical path marked ⚡. Everything not on it can slip a task without endangering the launch.
 
@@ -782,20 +795,29 @@ Critical path marked ⚡. Everything not on it can slip a task without endangeri
 
 ### P1 — Scaffold and deploy ⚡
 
-**Succeeds on exactly two things: live on the real domain, and correct at 380px.** Nothing else in this prompt matters by comparison.
+**Succeeds on exactly two things: live on `maarefa.pages.dev` with `noindex`, and mixed-direction rendering correct at 380px.** Nothing else in this prompt matters by comparison. The real domain moves to P6 per the hosting addendum.
 
 | | Task | Depends on |
 |---|---|---|
-| ⚡ | Next 16.3.0 + React 19.2.8 + TS 7.0.2, `output: 'export'` | — |
-| ⚡ | `styles/tokens.css` — the full §6 set, both themes | — |
-| ⚡ | Font subsetting, WOFF2 committed, `_headers` cache rules | — |
-| ⚡ | `app/layout.tsx` — `lang="ar" dir="rtl"`, inline anti-FOUC theme script | tokens, fonts |
-| ⚡ | RTL base CSS: logical properties, `dir="ltr"` code containers, bidi isolation | layout |
-| ⚡ | **Playwright 380px mixed-direction harness** | layout |
-| ⚡ | One real lesson page, mixed Arabic + English identifiers, verified at 380px | above |
-| ⚡ | Cloudflare Pages project, `.node-version`, domain live | export builds |
-| | `check-budget.ts` + baseline measurement | export builds |
-| | 404, `robots.txt` | layout |
+| ⚡ | **Measure the framework baseline and report it before anything else** | — |
+| ⚡ | Scaffold per the framework decision, `output: 'export'` / static | baseline call |
+| ⚡ | `styles/tokens.css` — the full §6 set, both themes | scaffold |
+| ⚡ | Font subsetting, WOFF2 committed, `_headers` cache rules | scaffold |
+| ⚡ | Root layout — `lang="ar" dir="rtl"`, inline anti-FOUC theme script | tokens, fonts |
+| ⚡ | RTL base CSS: logical properties, bidi isolation | layout |
+| ⚡ | `<CodeBlock>` always `dir="ltr"`, build-time Shiki | layout |
+| ⚡ | `<InlineCode>` — `dir="ltr"; unicode-bidi: isolate` | layout |
+| ⚡ | **RTL test page** — Arabic prose + inline English identifiers + code blocks + terminal output + file paths. A permanent fixture, not a throwaway. | CodeBlock, InlineCode |
+| ⚡ | **Playwright harness at 380px, 768px, 1440px** | RTL test page |
+| ⚡ | Greyscale render assertion (per Q-4: structural state differentiation is load-bearing) | Playwright harness |
+| ⚡ | Arabic pangram screenshot assertion (R-5: catches a broken font subset) | Playwright harness |
+| ⚡ | Shell — header, footer, landing page with real name/tagline/description | layout |
+| ⚡ | Cloudflare Pages project, `.node-version`, **live on `maarefa.pages.dev`** | export builds |
+| ⚡ | `_headers` `X-Robots-Tag: noindex` + `robots.txt` disallow, both derived from `SITE_URL` | deploy |
+| | `check-budget.ts`, budget frozen against the measured baseline | export builds |
+| | 404 | layout |
+
+**Acceptance (`PROMPTS.md` Prompt 1, as amended by the hosting addendum):** live on `maarefa.pages.dev` with `noindex` verified at the header level · Lighthouse ≥ 95 mobile on performance, accessibility, best practices, SEO · **zero JavaScript on the landing page** · RTL test page correct at all three widths, code never reordered, error text readable · zero console errors.
 
 ### P2 — Content pipeline ⚡
 
@@ -822,7 +844,10 @@ Critical path marked ⚡. Everything not on it can slip a task without endangeri
 | ⚡ | **380px mixed-direction Playwright case** | controls |
 | ⚡ | Transitions + `prefers-reduced-motion` | renderer |
 | ⚡ | `aria-live` explanation, `aria-hidden` SVG, keyboard | controls |
+| ⚡ | **Throwaway-third-visual test** — author a small extra visual as data only, confirm no component change was needed, then delete it. This is the empirical proof that §5.2's schema economics hold. | all above |
 | | `render: 'layout'`, `capacity`, `copiedFrom`, `sequences` tabs | renderer *(period 2 — no launch visual needs them)* |
+
+**Acceptance (`PROMPTS.md` Prompt 3):** both lessons live and correct at 380px, 768px, 1440px · adding a third visual requires only a data file, verified by actually doing it · keyboard navigable, screen reader reads each step's explanation · reduced-motion respected · component bundle absent from pages that don't use it · every error message verbatim from real output.
 
 ### P4 — Launch content ⚡
 
@@ -855,12 +880,18 @@ Budget more time on 2.2 than on any other single artifact. It is the reason some
 |---|---|---|
 | ⚡ | `build-feeds.ts` — sitemap, robots, RSS | P4 |
 | ⚡ | `check-links.ts` — internal fails the build | P4 |
-| ⚡ | Search Console verified, Cloudflare Web Analytics on | domain live |
-| | `/about` with real name and background | — |
+| ⚡ | Schema.org — `Course` on `/rust`, `TechArticle` on lessons, `FAQPage` on problems | P4 |
+| ⚡ | Breadcrumbs; unique title + meta description per page, derived from content | P4 |
+| ⚡ | **Attach the real domain**, point `SITE_URL` at it — flips `noindex` off and switches canonicals and sitemap to absolute real-domain URLs | domain acquired |
+| ⚡ | Search Console verified **against the real domain**, sitemap submitted | domain attached |
+| | Cloudflare Web Analytics on | domain attached |
+| | `/about` with real name and background | copy supplied |
 | | One static OG card | — |
 | | Print stylesheet | tokens |
 | | LICENSE + LICENSE-CONTENT + README | — |
 | | LinkedIn announcement | site live |
+
+**Acceptance (`PROMPTS.md` Prompt 5, as amended):** Giscus works, a test discussion posts and appears · `/admin` gated, live panel usable on a phone · `sitemap.xml` complete and accurate · real domain attached, `noindex` lifted, Search Console verified · full-site link check passes · Lighthouse ≥ 95 mobile across a sample of every page type.
 
 ### P7 — Period 2 (not launch)
 
@@ -895,7 +926,7 @@ Blocking items first.
 
 | # | Question | Blocks |
 |---|---|---|
-| **Q-1** | **`docs/PROMPTS.md` never arrived.** The answers said it exists and is being added; `docs/` contains only the three original specs. I did not invent one — §8 is grouped provisionally from the stated Prompt 0 / Prompt 1 facts plus `SITE_SPEC.md` §10. There is a `PROMPTS.md` in `~/Downloads` dated 2026-08-10, but it is the `tansiq_misr` project's file — a different project — so I did not use it. | §8, and starting P1 |
+| **Q-1** | ~~**`docs/PROMPTS.md` never arrived.**~~ **Resolved.** The real file arrived and is reconciled into §8: grouping unchanged, acceptance criteria folded in per phase, and seven additive requirements adopted (Lighthouse gate, three viewports, RTL test page, `<InlineCode>`, throwaway-visual test, Schema.org, breadcrumbs). Six statements in it were superseded by the Prompt 0 rulings and are corrected inline in the file itself. | — |
 | **Q-2** | **The domain.** The answers referred to "the note supplied with this answer"; no note or domain arrived. `lib/site.ts` holds a placeholder as instructed, so nothing else depends on it — but `sitemap.xml`, canonicals, the Cloudflare Access application and Search Console verification all need the real value before P6. | P1 deploy, P6 |
 | **Q-3** | **The corrected doc copies never arrived.** The answers said corrected `CLAUDE.md`, `PROMPTS.md` and `docs/` copies were supplied alongside. Files were untouched, so I applied every enumerated correction by hand instead — commit `36ff310`, reviewable as a diff against `c590b2b`. **If your copies still exist, diff them against that commit;** where they differ, yours win. Changes I made: brand rename throughout · E1–E5 · C1–C6 · `/playground` removed from the IA · ✅ dropped from 1.1–1.3 and "three exist as drafts" corrected · 1.4 moved to period 2 in all three docs · §7.1 metric replaced · the Eastern-Arabic numerals in the `VISUALS.md` 2.2 step table (`٣ كلمات`, `٢٤ بايت`) corrected · doc versions bumped to SITE_SPEC v3 and CURRICULUM v4. | reconciliation |
 
@@ -905,7 +936,7 @@ Decisions I need before the task that depends on them.
 |---|---|---|
 | **Q-4** | **Palette approval.** §6 is proposed, with measured ratios. Every AA threshold passes in both themes. The judgement call is the caveat: state colours sit close in luminance by design, so structural differentiation carries colour-blind and print legibility. Approve, or adjust? | P1 |
 | **Q-5** | **rustc pin.** Local is **1.97.1 (8bab26f4f, 2026-07-14)** — used to capture the verbatim E0382 text in §5.2. Standardise the site on 1.97.1, or track latest stable at authoring time? | P4 |
-| **Q-6** | **The Next baseline, one look before it is locked.** `SITE_SPEC.md` describes per-page islands and zero JS on prose pages — literally Astro's model. Next App Router ships its client runtime on every page regardless. Everything else in this plan is framework-agnostic, so this is cheapest to revisit at P1 and expensive after P4. I am proceeding with Next as `CLAUDE.md` mandates; I am flagging it once, with the number, rather than discovering it at lesson nine. | P1 |
+| **Q-6** | **Framework — measured, awaiting your call.** Threshold was 70 KB gzip first-load JS on a prose page. **Next 16.3.0: 129.5 KB** (+38.6 KB legacy polyfills modern browsers skip). **Astro 7.2.1: 0 bytes** on a prose page, 59.5 KB on a page carrying a React island, deferred via `client:visible`. Independently, `PROMPTS.md` Prompt 1 lists "zero JavaScript on the landing page" as an acceptance criterion — **unachievable on Next, exactly satisfied on Astro.** Recommendation is to switch; the call is yours and I will not make it unilaterally. | P1, blocking |
 | **Q-7** | **Giscus configuration** — repo owner, `repoId`, `categoryId`, and confirmation the giscus app is installed. Mapping will be `pathname`. | P5 |
 | **Q-8** | **Cloudflare account and Access.** Is the domain on Cloudflare DNS, and is Zero Trust enabled for the `/admin` Access application? | P1, P5 |
 | **Q-9** | **`/about` content** — real name, background, what you build. Cannot be drafted for you, and `CURRICULUM.md` §1 makes it the credibility mechanism. | P6 |

@@ -122,7 +122,7 @@ Module 2   2.1  2.2                  ← both new, both flagship visuals
 - 4 static SVGs (0.4, 1.1, 1.2, 1.3)
 - 5 problem pages (all already solved)
 
-Launch succeeds on exactly two things: **the site is live on the real domain, and mixed-direction rendering is correct at 380px.** Everything else can slip a task. If something has to give, give up polish and keep the deploy.
+Launch succeeds on exactly two things: **the site is live on `maarefa.pages.dev` with `noindex`, and mixed-direction rendering is correct at 380px.** Everything else can slip a task. If something has to give, give up polish and keep the deploy. The real domain is attached at leave period 1's end (Prompt 5), not at the first deploy — see `ADDENDUM-hosting.md`.
 
 This is a complete arc: a learner arriving with nothing installed can reach a working understanding of ownership — the concept that decides whether someone continues with Rust or abandons it. **That is a genuinely useful destination**, not a partial course.
 

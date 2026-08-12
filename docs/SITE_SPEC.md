@@ -273,9 +273,10 @@ Also deferred: paid product, progress tracking, cross-site search, PDF exports, 
 
 ### Leave period 1 — ship
 
-**Succeeds on exactly two things: the site is live on the real domain, and mixed-direction rendering is correct at 380px.** Everything below those two can slip a task without consequence. If something has to give, give up the polish and keep the deploy.
+**Succeeds on exactly two things: the site is live on `maarefa.pages.dev` with `noindex`, and mixed-direction rendering is correct at 380px.** Everything below those two can slip a task without consequence. If something has to give, give up the polish and keep the deploy.
 
-- Next.js scaffold, static export, Cloudflare Pages, domain live
+- Scaffold, static export, Cloudflare Pages, live on `maarefa.pages.dev`
+- Real domain attached at the end of the period, `noindex` lifted then
 - RTL + typography + dark mode, verified with mixed Arabic/English at 380px in CI
 - Nine lessons: 0.1–0.4, 1.1–1.3, 2.1, 2.2 — all new writing
 - Stack/heap panel + **ownership step-through visualiser** (`MemoryStepper`)
